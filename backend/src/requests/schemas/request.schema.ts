@@ -1,0 +1,93 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+import { MAX_FILES_PER_REQUEST } from '../file-validation';
+import { RequestStatus } from '../status-transitions';
+
+export const PHONE_PATTERN = /^\d{10,13}$/;
+
+@Schema({ _id: true })
+export class FileMeta {
+  _id: Types.ObjectId;
+
+  @Prop({ required: true })
+  key: string;
+
+  @Prop({ required: true })
+  originalName: string;
+
+  @Prop({ required: true })
+  mimeType: string;
+
+  @Prop({ required: true, min: 1 })
+  size: number;
+
+  @Prop({ required: true, default: () => new Date() })
+  uploadedAt: Date;
+}
+
+export const FileMetaSchema = SchemaFactory.createForClass(FileMeta);
+
+@Schema({ collection: 'requests', timestamps: true })
+export class Request {
+  _id: Types.ObjectId;
+
+  @Prop({ required: true, trim: true, minlength: 2, maxlength: 120 })
+  name: string;
+
+  @Prop({ required: true, trim: true, lowercase: true })
+  email: string;
+
+  @Prop({ required: true, match: PHONE_PATTERN })
+  phone: string;
+
+  @Prop({ required: true, trim: true, minlength: 10, maxlength: 2000 })
+  description: string;
+
+  // type explicito: metadado de enum importado se perde com isolatedModules
+  @Prop({
+    type: String,
+    required: true,
+    enum: Object.values(RequestStatus),
+    default: RequestStatus.PENDING,
+  })
+  status: RequestStatus;
+
+  @Prop({ required: true, select: false })
+  consultationTokenHash: string;
+
+  @Prop({
+    type: [FileMetaSchema],
+    default: [],
+    validate: {
+      validator: (files: unknown[]) => files.length <= MAX_FILES_PER_REQUEST,
+      message: `No maximo ${MAX_FILES_PER_REQUEST} arquivos`,
+    },
+  })
+  files: FileMeta[];
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type RequestDocument = HydratedDocument<Request>;
+
+export const RequestSchema = SchemaFactory.createForClass(Request);
+
+RequestSchema.index({ status: 1, createdAt: -1 });
+RequestSchema.index({ createdAt: -1 });
+
+// rede de seguranca: as respostas saem pelos mappers, nao pelo documento
+RequestSchema.set('toJSON', {
+  versionKey: false,
+  transform: (_doc, ret) => {
+    const { _id, consultationTokenHash: _hash, files, ...rest } = ret;
+    return {
+      id: String(_id),
+      ...rest,
+      files: files.map(({ _id: fileId, key: _key, ...file }) => ({
+        id: String(fileId),
+        ...file,
+      })),
+    };
+  },
+});

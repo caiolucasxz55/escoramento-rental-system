@@ -1,8 +1,11 @@
+import { hashSync } from 'bcryptjs';
 import { validateEnv } from './env.validation';
 
 const valid = {
   MONGODB_URI: 'mongodb://localhost:27017/escoramento',
   JWT_SECRET: 'segredo-de-teste',
+  ADMIN_EMAIL: 'admin@escoramento.local',
+  ADMIN_PASSWORD_HASH: hashSync('senha', 4),
   S3_BUCKET: 'escoramento-docs',
   S3_REGION: 'us-east-1',
   S3_ACCESS_KEY_ID: 'minioadmin',
@@ -19,7 +22,7 @@ describe('validateEnv', () => {
     expect(env.SIGNED_URL_TTL_SECONDS).toBe(300);
   });
 
-  it.each(['MONGODB_URI', 'JWT_SECRET'])(
+  it.each(['MONGODB_URI', 'JWT_SECRET', 'ADMIN_EMAIL', 'ADMIN_PASSWORD_HASH'])(
     'recusa subir sem %s e cita a variavel no erro',
     (name) => {
       const { [name]: _removed, ...rest } = valid as Record<string, string>;
@@ -50,5 +53,23 @@ describe('validateEnv', () => {
 
   it('recusa PORT nao numerica', () => {
     expect(() => validateEnv({ ...valid, PORT: 'abc' })).toThrow('PORT');
+  });
+
+  it('recusa senha em texto puro no lugar do hash', () => {
+    expect(() =>
+      validateEnv({ ...valid, ADMIN_PASSWORD_HASH: 'minha-senha' }),
+    ).toThrow('ADMIN_PASSWORD_HASH');
+  });
+
+  it.each(['1h', '15m', '3600'])('aceita JWT_EXPIRES_IN=%s', (value) => {
+    expect(
+      validateEnv({ ...valid, JWT_EXPIRES_IN: value }).JWT_EXPIRES_IN,
+    ).toBe(value);
+  });
+
+  it('recusa JWT_EXPIRES_IN invalido', () => {
+    expect(() => validateEnv({ ...valid, JWT_EXPIRES_IN: 'uma hora' })).toThrow(
+      'JWT_EXPIRES_IN',
+    );
   });
 });

@@ -2,11 +2,13 @@ import 'reflect-metadata'; // necessario fora do Nest (testes)
 import { plainToInstance, Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsEmail,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
+  Matches,
   Max,
   Min,
   validateSync,
@@ -32,18 +34,17 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   JWT_SECRET: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @Matches(/^\d+[smhd]?$/, { message: 'JWT_EXPIRES_IN ex.: 3600, 15m, 1h' })
   JWT_EXPIRES_IN: string = '1h';
 
-  // obrigatorias a partir do login do admin (#86)
-  @IsOptional()
-  @IsString()
-  ADMIN_EMAIL?: string;
+  @IsEmail({ require_tld: false })
+  ADMIN_EMAIL: string;
 
-  @IsOptional()
-  @IsString()
-  ADMIN_PASSWORD_HASH?: string;
+  // gerado por `npm run hash-password`
+  @Matches(/^\$2[aby]\$\d{2}\$.{53}$/, {
+    message: 'ADMIN_PASSWORD_HASH deve ser um hash bcrypt',
+  })
+  ADMIN_PASSWORD_HASH: string;
 
   @IsString()
   @IsNotEmpty()

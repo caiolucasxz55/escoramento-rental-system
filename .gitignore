@@ -6,6 +6,7 @@ dist/
 .next/
 out/
 coverage/
+*.tsbuildinfo
 
 # env (never commit secrets; keep .env.example)
 .env
@@ -20,3 +21,11 @@ Thumbs.db
 # editors
 .vscode/
 .idea/
+
+# ferramentas locais (Falange MCP / Claude Code) -- fora do repo do teste
+.mcp.json
+.claude/
+CLAUDE.local.md
+
+# material local do teste (enunciado etc.)
+docs/

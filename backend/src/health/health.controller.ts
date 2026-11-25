@@ -6,7 +6,6 @@ import { Connection } from 'mongoose';
 export class HealthController {
   constructor(@InjectConnection() private readonly connection: Connection) {}
 
-  /** 200 so quando o Mongo responde ao ping; 503 caso contrario. */
   @Get()
   async check() {
     const mongoUp = await this.connection.db

@@ -1,6 +1,4 @@
-// Os decorators do class-transformer leem metadados de tipo; o Nest carrega
-// isso sozinho, mas a validacao tambem roda fora dele (testes unitarios).
-import 'reflect-metadata';
+import 'reflect-metadata'; // necessario fora do Nest (testes)
 import { plainToInstance, Transform } from 'class-transformer';
 import {
   IsBoolean,
@@ -17,10 +15,6 @@ import {
 const toBoolean = ({ value }: { value: unknown }) =>
   value === true || value === 'true';
 
-/**
- * Variaveis de ambiente do backend. A API nao sobe se faltar alguma
- * obrigatoria: falhar na subida e melhor que falhar na primeira requisicao.
- */
 export class EnvironmentVariables {
   @IsInt()
   @Min(1)
@@ -42,7 +36,7 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   JWT_EXPIRES_IN: string = '1h';
 
-  // Passam a ser obrigatorias quando o login do admin existir.
+  // obrigatorias a partir do login do admin (#86)
   @IsOptional()
   @IsString()
   ADMIN_EMAIL?: string;
@@ -59,7 +53,7 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   S3_REGION: string;
 
-  // Vazios na AWS real; preenchidos com o MinIO local.
+  // vazios na AWS real
   @IsOptional()
   @IsUrl({ require_tld: false })
   S3_ENDPOINT?: string;
@@ -89,13 +83,10 @@ export class EnvironmentVariables {
   MAX_FILE_SIZE_MB: number = 10;
 }
 
-/**
- * Usada pelo ConfigModule. String vazia conta como ausente, para que
- * `S3_ENDPOINT=` no .env signifique "nao definido" (caso da AWS real).
- */
 export function validateEnv(
   config: Record<string, unknown>,
 ): EnvironmentVariables {
+  // string vazia conta como ausente (ex.: S3_ENDPOINT= na AWS)
   const cleaned = Object.fromEntries(
     Object.entries(config).filter(([, value]) => value !== ''),
   );

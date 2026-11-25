@@ -1,13 +1,5 @@
-# Infraestrutura local: MongoDB + MinIO (S3 compativel).
-# Backend e frontend rodam com `npm` para manter hot reload.
-#
-#   docker compose up -d
-#
-# As credenciais minioadmin sao o padrao local do MinIO, nao segredos reais.
-#
-# Imagem do MinIO: a MinIO deixou de publicar `minio/minio` e `minio/mc` no
-# Docker Hub. A da Chainguard e o mesmo servidor, mantida e publica, e ja traz
-# o `mc` -- por isso ela serve tanto ao servidor quanto ao `minio-init`.
+# Infra local (Mongo + MinIO). Apps rodam com npm.
+# minio/minio saiu do Docker Hub: imagem Chainguard (ja traz o mc).
 name: escoramento
 
 x-minio-env: &minio-env
@@ -30,7 +22,7 @@ services:
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       <<: *minio-env
-      # Alias usado so pelo healthcheck abaixo.
+      # alias do healthcheck
       MC_HOST_local: http://${MINIO_ROOT_USER:-minioadmin}:${MINIO_ROOT_PASSWORD:-minioadmin}@localhost:9000
     ports: ["9000:9000", "9001:9001"]
     volumes: [minio_data:/data]
@@ -40,7 +32,7 @@ services:
       timeout: 5s
       retries: 20
 
-  # Cria o bucket e garante que ele nao tenha acesso anonimo. Roda e sai.
+  # cria o bucket privado e sai
   minio-init:
     image: cgr.dev/chainguard/minio:latest
     depends_on:

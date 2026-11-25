@@ -11,7 +11,7 @@ import { HealthController } from './health/health.controller';
       inject: [ConfigService],
       useFactory: (config: ConfigService<EnvironmentVariables, true>) => ({
         uri: config.get('MONGODB_URI', { infer: true }),
-        // Sem isso, Mongo fora do ar trava o health por 30s antes do 503.
+        // padrao e 30s: health demoraria para dar 503
         serverSelectionTimeoutMS: 3000,
       }),
     }),

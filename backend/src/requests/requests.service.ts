@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { AppException } from '../common/app-exception';
 import {
   consultationTokenMatches,
@@ -10,6 +10,8 @@ import {
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ListQueryDto } from './dto/list-query.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
+import type { ValidatedUpload } from './parse-uploads.pipe';
+import { RequestFilesService } from './request-files.service';
 import {
   DetailView,
   ListItemView,
@@ -48,23 +50,33 @@ const notFound = () =>
 export class RequestsService {
   constructor(
     @InjectModel(Request.name) private readonly model: Model<Request>,
+    private readonly files: RequestFilesService,
   ) {}
 
-  async create({
-    name,
-    email,
-    phone,
-    description,
-  }: CreateRequestDto): Promise<CreatedRequest> {
+  // id gerado antes: a chave no S3 ja nasce com ele; S3 antes do Mongo
+  async create(
+    { name, email, phone, description }: CreateRequestDto,
+    uploads: ValidatedUpload[],
+  ): Promise<CreatedRequest> {
+    const _id = new Types.ObjectId();
+    const metas = await this.files.uploadAll(_id, uploads);
+
     const token = generateConsultationToken();
-    const created = await this.model.create({
-      name,
-      email,
-      phone,
-      description,
-      consultationTokenHash: hashConsultationToken(token),
-    });
-    return { id: String(created._id), token, status: created.status };
+    try {
+      const created = await this.model.create({
+        _id,
+        name,
+        email,
+        phone,
+        description,
+        files: metas,
+        consultationTokenHash: hashConsultationToken(token),
+      });
+      return { id: String(created._id), token, status: created.status };
+    } catch (error) {
+      await this.files.discard(metas);
+      throw error;
+    }
   }
 
   // id inexistente e token errado dao o mesmo 404

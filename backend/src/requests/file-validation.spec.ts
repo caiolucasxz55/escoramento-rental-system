@@ -1,4 +1,9 @@
-import { checkFile, detectFileType, megabytesToBytes } from './file-validation';
+import {
+  checkFile,
+  detectFileType,
+  megabytesToBytes,
+  sanitizeFilename,
+} from './file-validation';
 
 // arquivos reais minimos (PNG/JPEG 1x1, PDF de 1 pagina)
 const PNG = Buffer.from(
@@ -96,5 +101,27 @@ describe('checkFile', () => {
       ok: false,
       reason: 'UNSUPPORTED_FILE_TYPE',
     });
+  });
+});
+
+describe('sanitizeFilename', () => {
+  it.each([
+    ['contrato.pdf', 'contrato.pdf'],
+    ['nome "com" aspas.pdf', 'nome com aspas.pdf'],
+    ['../../etc/passwd.pdf', '....etcpasswd.pdf'],
+    ['a\\b.pdf', 'ab.pdf'],
+    ['quebra\r\nde\tlinha.pdf', 'quebradelinha.pdf'],
+    ['  espacos    demais  .pdf ', 'espacos demais .pdf'],
+    ['orçamento.pdf', 'orçamento.pdf'],
+  ])('%p -> %p', (input, expected) => {
+    expect(sanitizeFilename(input, 'arquivo.pdf')).toBe(expected);
+  });
+
+  it('nome que some todo vira o fallback', () => {
+    expect(sanitizeFilename('"/\\', 'arquivo.pdf')).toBe('arquivo.pdf');
+  });
+
+  it('corta nomes muito longos', () => {
+    expect(sanitizeFilename('a'.repeat(500), 'x')).toHaveLength(200);
   });
 });

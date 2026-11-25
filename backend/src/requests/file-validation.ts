@@ -54,3 +54,15 @@ export function checkFile(buffer: Buffer, maxSizeBytes: number): FileCheck {
 }
 
 export const megabytesToBytes = (mb: number): number => mb * 1024 * 1024;
+
+const MAX_FILENAME_LENGTH = 200;
+
+// so para exibicao e Content-Disposition; nunca entra na chave do S3
+export function sanitizeFilename(name: string, fallback: string): string {
+  const clean = name
+    .replace(/[\p{Cc}"'\\/]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_FILENAME_LENGTH);
+  return clean.length > 0 ? clean : fallback;
+}

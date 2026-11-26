@@ -1,25 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, Download } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
+import { buildReceipt, downloadText, receiptFilename } from "@/lib/receipt";
 import type { CreatedRentalRequest } from "@/types";
 
 import { CopyField } from "./copy-field";
 
 interface ConfirmationCardProps {
   created: CreatedRentalRequest;
-  onNewRequest: () => void;
 }
 
 // token so existe em memoria: some ao recarregar, nunca vai para a URL
-export function ConfirmationCard({ created, onNewRequest }: ConfirmationCardProps) {
+export function ConfirmationCard({ created }: ConfirmationCardProps) {
   const { copied, copy } = useCopyToClipboard();
+  const [sentAt] = useState(() => new Date());
   const both = `Identificador: ${created.id}\nToken de consulta: ${created.token}`;
+
+  const downloadReceipt = () =>
+    downloadText(receiptFilename(created.id), buildReceipt(created, `${window.location.origin}/status`, sentAt));
 
   return (
     <Card className="space-y-5">
@@ -32,7 +37,8 @@ export function ConfirmationCard({ created, onNewRequest }: ConfirmationCardProp
       </div>
 
       <Alert tone="info">
-        O token aparece <strong>só agora</strong>. Sem ele não é possível consultar a solicitação.
+        Aqui está seu token de consulta. Guarde-o para acompanhar o andamento da sua solicitação: ele{" "}
+        <strong>não aparece de novo</strong>.
       </Alert>
 
       <CopyField
@@ -52,11 +58,11 @@ export function ConfirmationCard({ created, onNewRequest }: ConfirmationCardProp
         <Button onClick={() => copy("both", both)}>
           {copied === "both" ? "Copiado" : "Copiar os dois"}
         </Button>
+        <Button variant="outline" onClick={downloadReceipt}>
+          <Download aria-hidden /> Baixar comprovante
+        </Button>
         <Button variant="outline" asChild>
           <Link href="/status">Acompanhar solicitação</Link>
-        </Button>
-        <Button variant="ghost" onClick={onNewRequest}>
-          Nova solicitação
         </Button>
       </div>
     </Card>

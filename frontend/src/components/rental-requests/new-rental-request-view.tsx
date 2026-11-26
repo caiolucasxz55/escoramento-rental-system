@@ -34,7 +34,7 @@ export function NewRentalRequestView() {
             title="Tudo certo!"
             subtitle="Recebemos sua solicitação. Guarde os dados abaixo para acompanhar."
           />
-          <ConfirmationCard created={created} onNewRequest={() => setCreated(null)} />
+          <ConfirmationCard created={created} />
         </>
       ) : (
         <>

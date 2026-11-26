@@ -1,9 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AppException } from '../../common/app-exception';
+import {
+  MAX_FILES_PER_REQUEST,
+  megabytesToBytes,
+} from '../../common/upload-limits';
 import { EnvironmentVariables } from '../../config/env.validation';
 import {
   STORAGE,
@@ -11,27 +15,25 @@ import {
   type Storage,
 } from '../../storage/storage.interface';
 import {
-  MAX_FILES_PER_REQUEST,
-  megabytesToBytes,
-} from '../rules/file-validation';
-import type { ValidatedUpload } from '../pipes/parse-uploads.pipe';
+  concurrentUpdate,
+  fileLimitReached,
+  fileNotFound,
+  noFiles,
+  requestNotEditable,
+  requestNotFound,
+  storageQuotaExceeded,
+} from '../errors';
 import { DetailView, toDetail } from '../mappers/rental-request.mappers';
-import { FileMeta, RentalRequest } from '../schemas/rental-request.schema';
+import type { ValidatedUpload } from '../pipes/parse-uploads.pipe';
 import { EDITABLE_STATUSES, isFinal } from '../rules/status-transitions';
+import { FileMeta, RentalRequest } from '../schemas/rental-request.schema';
 
 export interface SignedUrl {
   url: string;
   expiresIn: number;
 }
 
-const editableWithFile = (id: string, fileId: string) => ({
-  _id: id,
-  status: { $in: EDITABLE_STATUSES },
-  'files._id': fileId,
-});
-
-const noFiles = (message: string) =>
-  new AppException('NO_FILES', HttpStatus.BAD_REQUEST, message);
+type FileRef = Pick<FileMeta, '_id' | 'key'>;
 
 // Mongo nunca aponta para objeto inexistente; no pior caso sobra um objeto
 // orfao (privado) no S3, logado com a chave.
@@ -83,6 +85,12 @@ export class RentalRequestFilesService {
   async add(id: string, uploads: ValidatedUpload[]): Promise<DetailView> {
     if (uploads.length === 0) throw noFiles('Envie ao menos um arquivo.');
 
+    // checagem barata antes de subir ao S3; a garantia e a escrita condicional
+    const { files } = await this.editableOrThrow(id);
+    if (files.length + uploads.length > MAX_FILES_PER_REQUEST) {
+      throw fileLimitReached();
+    }
+
     const metas = await this.uploadAll(new Types.ObjectId(id), uploads);
     // files.{5-n} inexistente = ainda cabem n; checado na propria escrita
     const updated = await this.writeOrDiscard(metas, () =>
@@ -100,18 +108,7 @@ export class RentalRequestFilesService {
         )
         .lean(),
     );
-    if (!updated) {
-      throw await this.rejection(
-        id,
-        undefined,
-        () =>
-          new AppException(
-            'FILE_LIMIT_REACHED',
-            HttpStatus.CONFLICT,
-            `Limite de ${MAX_FILES_PER_REQUEST} arquivos por solicitação.`,
-          ),
-      );
-    }
+    if (!updated) throw await this.rejection(id, undefined, fileLimitReached);
     return toDetail(updated);
   }
 
@@ -119,14 +116,15 @@ export class RentalRequestFilesService {
   async remove(id: string, fileId: string): Promise<void> {
     const before = await this.model
       .findOneAndUpdate(
-        editableWithFile(id, fileId),
+        { _id: id, status: { $in: EDITABLE_STATUSES }, 'files._id': fileId },
         { $pull: { files: { _id: fileId } } },
         { returnDocument: 'before' },
       )
       .lean();
     if (!before) throw await this.rejection(id, fileId);
 
-    await this.deleteQuietly(this.keyOf(before, fileId));
+    const removed = before.files.find((f) => String(f._id) === fileId);
+    if (removed) await this.deleteQuietly(removed.key);
   }
 
   // envia o novo, troca o subdocumento, apaga o antigo
@@ -137,24 +135,30 @@ export class RentalRequestFilesService {
   ): Promise<DetailView> {
     if (!upload) throw noFiles('Envie o arquivo substituto.');
 
+    const { files } = await this.editableOrThrow(id, fileId);
+    const oldKey = files.find((f) => String(f._id) === fileId)!.key;
+
     const [meta] = await this.uploadAll(new Types.ObjectId(id), [upload]);
     meta._id = new Types.ObjectId(fileId); // fileId continua o mesmo
 
-    const before = await this.writeOrDiscard([meta], () =>
+    // a chave lida entra na condicao: se outra troca chegou antes, nao aplica
+    const updated = await this.writeOrDiscard([meta], () =>
       this.model
         .findOneAndUpdate(
-          editableWithFile(id, fileId),
+          {
+            _id: id,
+            status: { $in: EDITABLE_STATUSES },
+            files: { $elemMatch: { _id: fileId, key: oldKey } },
+          },
           { $set: { 'files.$': meta } },
-          { returnDocument: 'before' },
+          { returnDocument: 'after' },
         )
         .lean(),
     );
-    if (!before) throw await this.rejection(id, fileId);
+    if (!updated) throw await this.rejection(id, fileId);
 
-    await this.deleteQuietly(this.keyOf(before, fileId));
-    const fresh = await this.model.findById(id).lean();
-    if (!fresh) throw await this.rejection(id);
-    return toDetail(fresh);
+    await this.deleteQuietly(oldKey);
+    return toDetail(updated);
   }
 
   async signedUrl(
@@ -186,11 +190,7 @@ export class RentalRequestFilesService {
     ]);
     const incoming = uploads.reduce((sum, { size }) => sum + size, 0);
     if ((usage?.total ?? 0) + incoming > this.quotaBytes) {
-      throw new AppException(
-        'STORAGE_QUOTA_EXCEEDED',
-        HttpStatus.INSUFFICIENT_STORAGE,
-        'Limite de armazenamento atingido. Envie sem anexos ou tente mais tarde.',
-      );
+      throw storageQuotaExceeded();
     }
   }
 
@@ -225,10 +225,6 @@ export class RentalRequestFilesService {
     return result;
   }
 
-  private keyOf(doc: Pick<RentalRequest, 'files'>, fileId: string): string {
-    return doc.files.find((f) => String(f._id) === fileId)!.key;
-  }
-
   private async deleteQuietly(key: string): Promise<void> {
     try {
       await this.storage.delete(key);
@@ -240,40 +236,33 @@ export class RentalRequestFilesService {
     }
   }
 
-  // escrita condicional nao aplicou: descobre o motivo (404 ou 409)
+  // 404 se a solicitacao (ou o arquivo) nao existe, 409 se esta finalizada
+  private async editableOrThrow(
+    id: string,
+    fileId?: string,
+  ): Promise<{ files: FileRef[] }> {
+    const doc = await this.model
+      .findById(id, { status: 1, 'files._id': 1, 'files.key': 1 })
+      .lean();
+    if (!doc) throw requestNotFound();
+    if (fileId && !doc.files.some((f) => String(f._id) === fileId)) {
+      throw fileNotFound();
+    }
+    if (isFinal(doc.status)) throw requestNotEditable();
+    return doc;
+  }
+
+  // escrita condicional nao aplicou: o mesmo diagnostico, senao `otherwise`
   private async rejection(
     id: string,
     fileId?: string,
-    otherwise: () => AppException = () =>
-      new AppException(
-        'CONCURRENT_UPDATE',
-        HttpStatus.CONFLICT,
-        'Solicitação alterada por outra operação.',
-      ),
+    otherwise: () => AppException = concurrentUpdate,
   ): Promise<AppException> {
-    const doc = await this.model
-      .findById(id, { status: 1, 'files._id': 1 })
-      .lean();
-    if (!doc) {
-      return new AppException(
-        'REQUEST_NOT_FOUND',
-        HttpStatus.NOT_FOUND,
-        'Solicitação não encontrada.',
-      );
-    }
-    if (fileId && !doc.files.some((f) => String(f._id) === fileId)) {
-      return new AppException(
-        'FILE_NOT_FOUND',
-        HttpStatus.NOT_FOUND,
-        'Arquivo não encontrado nesta solicitação.',
-      );
-    }
-    if (isFinal(doc.status)) {
-      return new AppException(
-        'REQUEST_NOT_EDITABLE',
-        HttpStatus.CONFLICT,
-        'Solicitação aprovada ou cancelada não pode ser alterada.',
-      );
+    try {
+      await this.editableOrThrow(id, fileId);
+    } catch (error) {
+      if (error instanceof AppException) return error;
+      throw error;
     }
     return otherwise();
   }

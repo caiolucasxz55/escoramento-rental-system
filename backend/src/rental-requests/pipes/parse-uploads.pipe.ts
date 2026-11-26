@@ -1,12 +1,12 @@
 import { HttpStatus, Injectable, PipeTransform } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppException } from '../../common/app-exception';
+import { megabytesToBytes } from '../../common/upload-limits';
 import { EnvironmentVariables } from '../../config/env.validation';
 import {
   checkFile,
   DetectedFileType,
   FileCheck,
-  megabytesToBytes,
   sanitizeFilename,
 } from '../rules/file-validation';
 

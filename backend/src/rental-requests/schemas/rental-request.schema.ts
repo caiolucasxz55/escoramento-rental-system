@@ -1,9 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
+import { MAX_FILES_PER_REQUEST } from '../../common/upload-limits';
+import {
+  DESCRIPTION_LENGTH,
+  NAME_LENGTH,
+  PHONE_PATTERN,
+} from '../rules/field-rules';
 import { RentalRequestStatus } from '../rules/status-transitions';
-
-export const PHONE_PATTERN = /^\d{10,13}$/;
 
 @Schema({ _id: true })
 export class FileMeta {
@@ -31,7 +34,12 @@ export const FileMetaSchema = SchemaFactory.createForClass(FileMeta);
 export class RentalRequest {
   _id: Types.ObjectId;
 
-  @Prop({ required: true, trim: true, minlength: 2, maxlength: 120 })
+  @Prop({
+    required: true,
+    trim: true,
+    minlength: NAME_LENGTH.min,
+    maxlength: NAME_LENGTH.max,
+  })
   name: string;
 
   @Prop({ required: true, trim: true, lowercase: true })
@@ -40,7 +48,12 @@ export class RentalRequest {
   @Prop({ required: true, match: PHONE_PATTERN })
   phone: string;
 
-  @Prop({ required: true, trim: true, minlength: 10, maxlength: 2000 })
+  @Prop({
+    required: true,
+    trim: true,
+    minlength: DESCRIPTION_LENGTH.min,
+    maxlength: DESCRIPTION_LENGTH.max,
+  })
   description: string;
 
   // type explicito: metadado de enum importado se perde com isolatedModules

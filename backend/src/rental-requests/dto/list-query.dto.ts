@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
 import { RentalRequestStatus } from '../rules/status-transitions';
+import { INVALID_STATUS_MESSAGE } from './change-status.dto';
 
 export const MAX_PAGE_SIZE = 50;
 
@@ -19,8 +20,6 @@ export class ListQueryDto {
   limit: number = 10;
 
   @IsOptional()
-  @IsEnum(RentalRequestStatus, {
-    message: `Status inválido. Use: ${Object.values(RentalRequestStatus).join(', ')}.`,
-  })
+  @IsEnum(RentalRequestStatus, { message: INVALID_STATUS_MESSAGE })
   status?: RentalRequestStatus;
 }

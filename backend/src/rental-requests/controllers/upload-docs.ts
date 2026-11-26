@@ -1,6 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
-import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
+import { MAX_FILES_PER_REQUEST } from '../../common/upload-limits';
 
 const binary = { type: 'string', format: 'binary' } as const;
 

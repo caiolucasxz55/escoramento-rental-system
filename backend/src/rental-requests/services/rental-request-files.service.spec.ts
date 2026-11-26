@@ -142,7 +142,27 @@ describe('RentalRequestFilesService', () => {
   });
 
   describe('add', () => {
-    it('$push nao aplica (limite): apaga o objeto enviado e responde 409', async () => {
+    it('ja com 5 arquivos: 409 antes de enviar qualquer coisa ao S3', async () => {
+      const full = {
+        ...doc(),
+        files: Array.from({ length: 5 }, () => doc().files[0]),
+      };
+      const findOneAndUpdate = jest.fn();
+      const { files, storage } = setup({
+        findOneAndUpdate,
+        findById: jest.fn(() => query(full)),
+      });
+      const put = jest.spyOn(storage, 'put');
+
+      await expect(files.add(String(id), [upload()])).rejects.toMatchObject({
+        code: 'FILE_LIMIT_REACHED',
+        status: 409,
+      });
+      expect(put).not.toHaveBeenCalled();
+      expect(findOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('corrida: o $push condicional nao aplica, apaga o objeto enviado e responde 409', async () => {
       const { files, storage } = setup({
         findOneAndUpdate: jest.fn(() => query(null)),
         findById: jest.fn(() => query(doc())),
@@ -157,7 +177,10 @@ describe('RentalRequestFilesService', () => {
 
     it('condicao de limite vai na propria query: files.{5-n} inexistente', async () => {
       const findOneAndUpdate = jest.fn(() => query(doc()));
-      const { files } = setup({ findOneAndUpdate });
+      const { files } = setup({
+        findOneAndUpdate,
+        findById: jest.fn(() => query(doc())),
+      });
 
       await files.add(String(id), [upload(), upload()]);
 
@@ -168,21 +191,25 @@ describe('RentalRequestFilesService', () => {
       );
     });
 
-    it('estado final: 409 REQUEST_NOT_EDITABLE e nada fica no storage', async () => {
+    it('estado final: 409 REQUEST_NOT_EDITABLE sem enviar ao S3', async () => {
+      const findOneAndUpdate = jest.fn();
       const { files, storage } = setup({
-        findOneAndUpdate: jest.fn(() => query(null)),
+        findOneAndUpdate,
         findById: jest.fn(() => query(doc(RentalRequestStatus.APPROVED))),
       });
+      const put = jest.spyOn(storage, 'put');
 
       await expect(files.add(String(id), [upload()])).rejects.toMatchObject({
         code: 'REQUEST_NOT_EDITABLE',
       });
-      expect(storage.objects.size).toBe(0);
+      expect(put).not.toHaveBeenCalled();
+      expect(findOneAndUpdate).not.toHaveBeenCalled();
     });
 
     it('erro do Mongo no $push: apaga o objeto enviado', async () => {
       const { files, storage } = setup({
         findOneAndUpdate: jest.fn(() => query(new Error('mongo caiu'))),
+        findById: jest.fn(() => query(doc())),
       });
 
       await expect(files.add(String(id), [upload()])).rejects.toThrow(
@@ -236,23 +263,58 @@ describe('RentalRequestFilesService', () => {
   });
 
   describe('replace', () => {
-    it('troca falhou: apaga o novo e mantem o antigo', async () => {
-      const { files, storage } = setup({
-        findOneAndUpdate: jest.fn(() => query(null)),
-        findById: jest.fn(() => query(doc(RentalRequestStatus.CANCELLED))),
-      });
-      await storage.put({
-        key: 'rental-requests/x/antigo.pdf',
+    const OLD = 'rental-requests/x/antigo.pdf';
+    const withOld = async (storage: InMemoryStorage) =>
+      storage.put({
+        key: OLD,
         body: Buffer.alloc(1),
         contentType: 'application/pdf',
       });
 
+    it('estado final: 409 antes de enviar o novo; o antigo fica', async () => {
+      const { files, storage } = setup({
+        findOneAndUpdate: jest.fn(),
+        findById: jest.fn(() => query(doc(RentalRequestStatus.CANCELLED))),
+      });
+      await withOld(storage);
+
       await expect(
         files.replace(String(id), String(fileId), upload()),
       ).rejects.toMatchObject({ code: 'REQUEST_NOT_EDITABLE' });
-      expect([...storage.objects.keys()]).toEqual([
-        'rental-requests/x/antigo.pdf',
-      ]);
+      expect([...storage.objects.keys()]).toEqual([OLD]);
+    });
+
+    it('sucesso: condicao com a chave lida, apaga o antigo e responde sem reler', async () => {
+      const findById = jest.fn(() => query(doc()));
+      const findOneAndUpdate = jest.fn(() => query(doc()));
+      const { files, storage } = setup({ findById, findOneAndUpdate });
+      await withOld(storage);
+
+      await files.replace(String(id), String(fileId), upload());
+
+      expect(findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          files: { $elemMatch: { _id: String(fileId), key: OLD } },
+        }),
+        expect.anything(),
+        { returnDocument: 'after' },
+      );
+      expect(findById).toHaveBeenCalledTimes(1);
+      expect(storage.objects.has(OLD)).toBe(false);
+      expect(storage.objects.size).toBe(1);
+    });
+
+    it('corrida: outra troca chegou antes, 409 CONCURRENT_UPDATE; apaga o novo, o antigo fica', async () => {
+      const { files, storage } = setup({
+        findById: jest.fn(() => query(doc())),
+        findOneAndUpdate: jest.fn(() => query(null)),
+      });
+      await withOld(storage);
+
+      await expect(
+        files.replace(String(id), String(fileId), upload()),
+      ).rejects.toMatchObject({ code: 'CONCURRENT_UPDATE', status: 409 });
+      expect([...storage.objects.keys()]).toEqual([OLD]);
     });
   });
 });

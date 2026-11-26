@@ -1,9 +1,5 @@
-import {
-  checkFile,
-  detectFileType,
-  megabytesToBytes,
-  sanitizeFilename,
-} from './file-validation';
+import { megabytesToBytes } from '../../common/upload-limits';
+import { checkFile, detectFileType, sanitizeFilename } from './file-validation';
 
 // arquivos reais minimos (PNG/JPEG 1x1, PDF de 1 pagina)
 const PNG = Buffer.from(

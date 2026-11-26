@@ -1,6 +1,10 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, Length, Matches } from 'class-validator';
-import { PHONE_PATTERN } from '../schemas/rental-request.schema';
+import {
+  DESCRIPTION_LENGTH,
+  NAME_LENGTH,
+  PHONE_PATTERN,
+} from '../rules/field-rules';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -10,7 +14,9 @@ export class CreateRentalRequestDto {
   /** @example "Construtora Exemplo Ltda" */
   @Transform(trim)
   @IsString({ message: 'Informe o nome ou empresa.' })
-  @Length(2, 120, { message: 'O nome deve ter entre 2 e 120 caracteres.' })
+  @Length(NAME_LENGTH.min, NAME_LENGTH.max, {
+    message: `O nome deve ter entre ${NAME_LENGTH.min} e ${NAME_LENGTH.max} caracteres.`,
+  })
   name: string;
 
   /** @example "contato@exemplo.com" */
@@ -36,8 +42,8 @@ export class CreateRentalRequestDto {
   /** @example "Preciso de 40 escoras metalicas por 30 dias para a obra X." */
   @Transform(trim)
   @IsString({ message: 'Informe a descrição do pedido.' })
-  @Length(10, 2000, {
-    message: 'A descrição deve ter entre 10 e 2000 caracteres.',
+  @Length(DESCRIPTION_LENGTH.min, DESCRIPTION_LENGTH.max, {
+    message: `A descrição deve ter entre ${DESCRIPTION_LENGTH.min} e ${DESCRIPTION_LENGTH.max} caracteres.`,
   })
   description: string;
 }

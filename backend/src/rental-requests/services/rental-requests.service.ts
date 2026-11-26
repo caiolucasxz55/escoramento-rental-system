@@ -1,21 +1,28 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { AppException } from '../../common/app-exception';
 import {
   consultationTokenMatches,
   generateConsultationToken,
   hashConsultationToken,
-} from '../../common/consultation-token';
+} from '../rules/consultation-token';
 import { CreateRentalRequestDto } from '../dto/create-rental-request.dto';
 import { ListQueryDto } from '../dto/list-query.dto';
 import { UpdateRentalRequestDto } from '../dto/update-rental-request.dto';
 import type { ValidatedUpload } from '../pipes/parse-uploads.pipe';
+import {
+  invalidStatusTransition,
+  nothingToUpdate,
+  requestNotEditable,
+  requestNotFound,
+  statusConflict,
+} from '../errors';
 import { RentalRequestFilesService } from './rental-request-files.service';
 import {
   DetailView,
   ListItemView,
   ListRow,
+  PublicStatusRow,
   PublicStatusView,
   toDetail,
   toListItem,
@@ -38,13 +45,6 @@ export interface Page<T> {
   data: T[];
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
-
-const notFound = () =>
-  new AppException(
-    'REQUEST_NOT_FOUND',
-    HttpStatus.NOT_FOUND,
-    'Solicitação não encontrada.',
-  );
 
 @Injectable()
 export class RentalRequestsService {
@@ -82,15 +82,21 @@ export class RentalRequestsService {
 
   // id inexistente e token errado dao o mesmo 404
   async getPublicStatus(id: string, token: string): Promise<PublicStatusView> {
+    // so o que a resposta publica usa: sem dados pessoais, arquivos so contados
     const found = await this.model
-      .findById(id)
-      .select('+consultationTokenHash')
-      .lean();
+      .findById(id, {
+        status: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        filesCount: { $size: '$files' },
+        consultationTokenHash: 1,
+      })
+      .lean<PublicStatusRow & { consultationTokenHash: string }>();
     if (
       !found ||
       !consultationTokenMatches(token, found.consultationTokenHash)
     ) {
-      throw notFound();
+      throw requestNotFound();
     }
     return toPublicStatus(found);
   }
@@ -124,19 +130,13 @@ export class RentalRequestsService {
 
   async findDetail(id: string): Promise<DetailView> {
     const found = await this.model.findById(id).lean();
-    if (!found) throw notFound();
+    if (!found) throw requestNotFound();
     return toDetail(found);
   }
 
   async update(id: string, dto: UpdateRentalRequestDto): Promise<DetailView> {
     // sem isso o $set vazio so mexeria no updatedAt
-    if (Object.keys(dto).length === 0) {
-      throw new AppException(
-        'NOTHING_TO_UPDATE',
-        HttpStatus.BAD_REQUEST,
-        'Envie ao menos um campo para alterar.',
-      );
-    }
+    if (Object.keys(dto).length === 0) throw nothingToUpdate();
     const updated = await this.model
       .findOneAndUpdate(
         { _id: id, status: { $in: EDITABLE_STATUSES } },
@@ -147,11 +147,7 @@ export class RentalRequestsService {
     if (updated) return toDetail(updated);
 
     await this.throwIfMissing(id);
-    throw new AppException(
-      'REQUEST_NOT_EDITABLE',
-      HttpStatus.CONFLICT,
-      'Solicitação aprovada ou cancelada não pode ser alterada.',
-    );
+    throw requestNotEditable();
   }
 
   async changeStatus(
@@ -159,14 +155,10 @@ export class RentalRequestsService {
     next: RentalRequestStatus,
   ): Promise<DetailView> {
     const current = await this.model.findById(id, { status: 1 }).lean();
-    if (!current) throw notFound();
+    if (!current) throw requestNotFound();
 
     if (!canTransition(current.status, next)) {
-      throw new AppException(
-        'INVALID_STATUS_TRANSITION',
-        HttpStatus.CONFLICT,
-        `Não é possível mudar de ${current.status} para ${next}.`,
-      );
+      throw invalidStatusTransition(current.status, next);
     }
 
     // so aplica se ninguem mudou o status entre a leitura e a escrita
@@ -177,17 +169,11 @@ export class RentalRequestsService {
         { returnDocument: 'after' },
       )
       .lean();
-    if (!updated) {
-      throw new AppException(
-        'STATUS_CONFLICT',
-        HttpStatus.CONFLICT,
-        'Status alterado por outra operação.',
-      );
-    }
+    if (!updated) throw statusConflict();
     return toDetail(updated);
   }
 
   private async throwIfMissing(id: string): Promise<void> {
-    if (!(await this.model.exists({ _id: id }))) throw notFound();
+    if (!(await this.model.exists({ _id: id }))) throw requestNotFound();
   }
 }

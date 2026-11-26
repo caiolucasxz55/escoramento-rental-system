@@ -1,5 +1,8 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
+// token no header, nunca na query string (logs e historico)
+export const CONSULTATION_TOKEN_HEADER = 'x-consultation-token';
+
 // 256 bits aleatorios: SHA-256 basta, bcrypt nao agrega aqui
 const TOKEN_BYTES = 32;
 

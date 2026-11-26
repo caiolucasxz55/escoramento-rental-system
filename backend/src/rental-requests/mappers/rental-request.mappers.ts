@@ -58,16 +58,17 @@ export type ListRow = Pick<
   filesCount: number;
 };
 
-export function toPublicStatus(
-  r: Pick<
-    RentalRequestData,
-    '_id' | 'status' | 'files' | 'createdAt' | 'updatedAt'
-  >,
-): PublicStatusView {
+// consulta publica vem com projecao: filesCount calculado no Mongo
+export type PublicStatusRow = Pick<
+  RentalRequest,
+  '_id' | 'status' | 'createdAt' | 'updatedAt'
+> & { filesCount: number };
+
+export function toPublicStatus(r: PublicStatusRow): PublicStatusView {
   return {
     id: String(r._id),
     status: r.status,
-    filesCount: r.files.length,
+    filesCount: r.filesCount,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   };

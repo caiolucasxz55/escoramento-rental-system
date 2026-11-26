@@ -22,7 +22,7 @@ import { ChangeStatusDto } from '../dto/change-status.dto';
 import { ListQueryDto } from '../dto/list-query.dto';
 import { SignedUrlQueryDto } from '../dto/signed-url-query.dto';
 import { UpdateRentalRequestDto } from '../dto/update-rental-request.dto';
-import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
+import { MAX_FILES_PER_REQUEST } from '../../common/upload-limits';
 import { ParseUploadsPipe, ValidatedUpload } from '../pipes/parse-uploads.pipe';
 import { RentalRequestFilesService } from '../services/rental-request-files.service';
 import { RentalRequestsService } from '../services/rental-requests.service';

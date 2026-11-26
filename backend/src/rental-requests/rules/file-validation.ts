@@ -6,8 +6,6 @@ export interface DetectedFileType {
   mimeType: string;
 }
 
-export const MAX_FILES_PER_REQUEST = 5;
-
 const SIGNATURES: ReadonlyArray<{ bytes: number[]; type: DetectedFileType }> = [
   {
     // %PDF-
@@ -52,8 +50,6 @@ export function checkFile(buffer: Buffer, maxSizeBytes: number): FileCheck {
     ? { ok: true, type }
     : { ok: false, reason: 'UNSUPPORTED_FILE_TYPE' };
 }
-
-export const megabytesToBytes = (mb: number): number => mb * 1024 * 1024;
 
 const MAX_FILENAME_LENGTH = 200;
 

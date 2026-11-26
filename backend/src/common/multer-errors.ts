@@ -1,4 +1,4 @@
-import { MAX_FILES_PER_REQUEST } from '../rental-requests/rules/file-validation';
+import { MAX_FILES_PER_REQUEST } from './upload-limits';
 
 export interface KnownError {
   error: string;

@@ -9,7 +9,7 @@ import { AdminRentalRequestsController } from './controllers/admin-rental-reques
 import {
   MAX_FILES_PER_REQUEST,
   megabytesToBytes,
-} from './rules/file-validation';
+} from '../common/upload-limits';
 import { PublicRentalRequestsController } from './controllers/public-rental-requests.controller';
 import { RentalRequestFilesService } from './services/rental-request-files.service';
 import { RentalRequestsService } from './services/rental-requests.service';

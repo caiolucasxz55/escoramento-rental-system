@@ -27,7 +27,8 @@ const rentalRequest = {
 
 describe('mappers', () => {
   it('toPublicStatus so expoe o resumo publico (H3)', () => {
-    expect(toPublicStatus(rentalRequest)).toEqual({
+    // mesmo recebendo dados pessoais, so o resumo sai
+    expect(toPublicStatus({ ...rentalRequest, filesCount: 1 })).toEqual({
       id: String(rentalRequest._id),
       status: RentalRequestStatus.PENDING,
       filesCount: 1,

@@ -13,12 +13,11 @@ import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ParseObjectIdPipe } from '../../common/parse-object-id.pipe';
 import { RateLimited } from '../../common/rate-limit';
 import { CreateRentalRequestDto } from '../dto/create-rental-request.dto';
-import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
+import { MAX_FILES_PER_REQUEST } from '../../common/upload-limits';
+import { CONSULTATION_TOKEN_HEADER } from '../rules/consultation-token';
 import { ParseUploadsPipe, ValidatedUpload } from '../pipes/parse-uploads.pipe';
 import { RentalRequestsService } from '../services/rental-requests.service';
 import { ApiCreateWithFiles } from './upload-docs';
-
-export const CONSULTATION_TOKEN_HEADER = 'x-consultation-token';
 
 @ApiTags('public')
 @Controller('public/requests')
@@ -39,7 +38,6 @@ export class PublicRentalRequestsController {
     return this.rentalRequests.create(dto, uploads);
   }
 
-  // token no header, nunca na query string (logs e historico)
   @Get(':id/status')
   @ApiOperation({ summary: 'Status publico com o token no header' })
   @RateLimited()

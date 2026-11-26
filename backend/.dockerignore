@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+# segredos nunca entram na imagem: chegam pelo compose (env_file)
+.env
+.env.*
+!.env.example

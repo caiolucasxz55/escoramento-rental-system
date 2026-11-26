@@ -1,0 +1,7 @@
+node_modules
+.next
+coverage
+# .env.local e do dev; na imagem os valores vem dos build args
+.env
+.env.*
+!.env.example

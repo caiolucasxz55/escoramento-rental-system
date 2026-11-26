@@ -8,7 +8,7 @@ Módulo full stack para clientes solicitarem a locação de escoramento (com at�
 
 - **Node.js 22.12 ou mais novo** (desenvolvido e testado com 22.13.1)
 - npm 10
-- Docker e Docker Compose
+- Docker e Docker Compose (2.30 ou mais novo para o modo "tudo em Docker")
 
 ## Como executar
 
@@ -40,6 +40,23 @@ npm run dev
 | Console do MinIO | http://localhost:9001 (`minioadmin` / `minioadmin`) |
 
 O `npm run seed` imprime um identificador e um token prontos para testar a consulta pública em `/status`.
+
+### Tudo em Docker (sem Node na máquina)
+
+A API e o frontend também têm `Dockerfile`, e o compose os sobe no perfil `app`. As URLs são as mesmas da tabela acima.
+
+```bash
+cp backend/.env.example backend/.env
+docker compose --profile app run --rm --no-deps api node scripts/hash-password.mjs admin123
+# cole a saída em ADMIN_PASSWORD_HASH no backend/.env
+docker compose --profile app up -d --build
+docker compose exec api node scripts/seed.mjs   # opcional
+```
+
+- Nesse modo a infraestrutura é sempre a do compose (Mongo e MinIO, com os hosts internos `mongo` e `minio`); do `backend/.env` vêm só JWT, admin e cota. Para usar a AWS, rode a API com `npm`.
+- A senha mostrada na tela de login é embutida no build do frontend. Se usou outra senha no `hash-password`, rode com `DEMO_ADMIN_PASSWORD=sua-senha docker compose --profile app up -d --build`.
+- Medido com tudo no ar: API ~105 MB de RAM, frontend ~50 MB, Mongo ~130 MB (cache limitado a 256 MB) e MinIO ~150 MB. As imagens têm ~410 MB (API) e ~340 MB (frontend, build `standalone` do Next).
+- `docker compose up -d` sem o perfil continua subindo só a infraestrutura, para desenvolver com hot reload.
 
 ## Como testar
 
@@ -175,6 +192,7 @@ O `message` vem em português, pronto para o usuário; o frontend escolhe o text
 
 **Ambiente.**
 - A MinIO deixou de publicar `minio/minio` no Docker Hub; o compose usa `cgr.dev/chainguard/minio`, o mesmo servidor, mantido e com o `mc` embutido.
+- No compose, o `backend/.env` entra com `format: raw`: sem isso o Compose trata os `$` do hash bcrypt como variáveis e a API recusa subir com o hash corrompido.
 - Os pacotes do Nest 12 são só ESM; para os testes rodarem no Node 22, o Jest converte `@nestjs/*` para CommonJS só durante o teste (`jest.config.ts`).
 
 ## Hipóteses adotadas
@@ -237,7 +255,7 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 - **Rate limit em Redis**, compartilhado entre instâncias.
 - **Cota por contador** atualizado a cada upload e remoção, em vez de somar a coleção a cada envio.
 - **Logs estruturados**, métricas e tracing (OpenTelemetry).
-- **Entrega:** Dockerfiles, pipeline (lint + testes + build) e deploy.
+- **Entrega:** pipeline (lint + testes + build) e deploy das imagens.
 - **LGPD:** política de retenção e anonimização dos dados pessoais.
 
 Nenhuma dessas mudanças exige reescrever o núcleo: as regras de status são funções puras, o storage está atrás de uma interface e a autorização está concentrada em guards.

@@ -59,6 +59,23 @@ describe('Area publica (e2e)', () => {
       expect(res.body).toMatchObject({ error: 'VALIDATION_ERROR' });
     });
 
+    it.each([
+      [
+        'descricao curta',
+        { ...VALID_FIELDS, description: '  curta   ' },
+        'A descrição deve ter entre 10 e 2000 caracteres.',
+      ],
+      [
+        'campo extra',
+        { ...VALID_FIELDS, status: 'APPROVED' },
+        'O campo "status" não é permitido.',
+      ],
+    ])('%s: mensagem em portugues', async (_label, fields, message) => {
+      const res = await create([], fields).expect(400);
+
+      expect(res.body.message).toContain(message);
+    });
+
     it('6 arquivos: 400 e nada gravado no Mongo nem no storage', async () => {
       const docs = await t.model.countDocuments();
       const objects = t.storage.objects.size;

@@ -53,7 +53,7 @@ export function ConfirmationCard({ created, onNewRequest }: ConfirmationCardProp
           {copied === "both" ? "Copiado" : "Copiar os dois"}
         </Button>
         <Button variant="outline" asChild>
-          <Link href="/status">Consultar status</Link>
+          <Link href="/status">Acompanhar solicitação</Link>
         </Button>
         <Button variant="ghost" onClick={onNewRequest}>
           Nova solicitação

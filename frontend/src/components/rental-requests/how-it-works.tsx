@@ -4,7 +4,7 @@ import { ClipboardList, KeyRound, SearchCheck } from "lucide-react";
 const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
   { icon: ClipboardList, title: "Envie o pedido", text: "Dados, descrição e até 5 documentos." },
   { icon: KeyRound, title: "Guarde o token", text: "Você recebe um identificador e um token de consulta." },
-  { icon: SearchCheck, title: "Acompanhe", text: "Consulte o status quando quiser em Consultar status." },
+  { icon: SearchCheck, title: "Acompanhe", text: "Veja o status quando quiser em Acompanhar solicitação." },
 ];
 
 export function HowItWorks() {

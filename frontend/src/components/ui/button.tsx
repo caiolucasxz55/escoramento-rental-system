@@ -51,8 +51,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, block }), className)}
         {...props}
       >
-        {loading && !asChild && <LoaderCircle className="animate-spin" aria-hidden />}
-        {children}
+        {/* asChild: o Slot exige um unico filho, entao sem spinner */}
+        {asChild ? (
+          children
+        ) : (
+          <>
+            {loading && <LoaderCircle className="animate-spin" aria-hidden />}
+            {children}
+          </>
+        )}
       </Comp>
     );
   },

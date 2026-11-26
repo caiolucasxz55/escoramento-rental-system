@@ -8,6 +8,7 @@ import { RentalRequestFields } from "@/components/rental-requests/rental-request
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import { useValidatedValues } from "@/hooks/use-validated-values";
 import { adminApi } from "@/lib/api";
 import { errorMessage } from "@/lib/error-messages";
 import { isFinal } from "@/lib/rental-request-status";
@@ -26,7 +27,7 @@ const pick = ({ name, email, phone, description }: RentalRequestDetail): RentalR
 });
 
 export function RentalRequestDataForm({ request, onSaved }: DataFormProps) {
-  const [values, setValues] = useState(() => pick(request));
+  const { values, setValues, errors, validate } = useValidatedValues(() => pick(request));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const locked = isFinal(request.status);
@@ -34,6 +35,7 @@ export function RentalRequestDataForm({ request, onSaved }: DataFormProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!validate()) return;
     setSaving(true);
     setError(null);
     try {
@@ -55,11 +57,12 @@ export function RentalRequestDataForm({ request, onSaved }: DataFormProps) {
       {locked && (
         <Alert className="mt-4">Solicitação aprovada ou cancelada: os dados ficam somente leitura.</Alert>
       )}
-      <form onSubmit={handleSubmit} className="mt-5 space-y-5">
+      <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-5">
         <RentalRequestFields
           idPrefix="edit"
           values={values}
           onChange={setValues}
+          errors={errors}
           disabled={locked || saving}
         />
         {error && <Alert tone="error">{error}</Alert>}

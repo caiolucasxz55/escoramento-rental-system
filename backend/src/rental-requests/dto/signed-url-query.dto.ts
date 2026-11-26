@@ -7,6 +7,6 @@ import {
 export class SignedUrlQueryDto {
   /** inline exibe no navegador (preview); attachment forca o download */
   @IsOptional()
-  @IsIn(DISPOSITIONS)
+  @IsIn(DISPOSITIONS, { message: 'disposition deve ser inline ou attachment.' })
   disposition?: Disposition = 'attachment';
 }

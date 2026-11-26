@@ -1,5 +1,5 @@
-import { NewRentalRequestView } from "@/components/rental-requests/new-rental-request-view";
+import { HomeHero } from "@/components/rental-requests/home-hero";
 
-export default function NewRentalRequestPage() {
-  return <NewRentalRequestView />;
+export default function HomePage() {
+  return <HomeHero />;
 }

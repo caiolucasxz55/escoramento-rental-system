@@ -6,17 +6,21 @@ export const MAX_PAGE_SIZE = 50;
 
 export class ListQueryDto {
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'A página deve ser um número inteiro.' })
+  @Min(1, { message: 'A página deve ser 1 ou maior.' })
   page: number = 1;
 
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(MAX_PAGE_SIZE)
+  @IsInt({ message: 'O limite deve ser um número inteiro.' })
+  @Min(1, { message: 'O limite deve ser 1 ou maior.' })
+  @Max(MAX_PAGE_SIZE, {
+    message: `O limite deve ser no máximo ${MAX_PAGE_SIZE}.`,
+  })
   limit: number = 10;
 
   @IsOptional()
-  @IsEnum(RentalRequestStatus)
+  @IsEnum(RentalRequestStatus, {
+    message: `Status inválido. Use: ${Object.values(RentalRequestStatus).join(', ')}.`,
+  })
   status?: RentalRequestStatus;
 }

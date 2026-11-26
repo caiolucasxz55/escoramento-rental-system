@@ -37,9 +37,9 @@ export function StatusLookupView() {
   }
 
   return (
-    <>
+    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <PageHeader
-        title="Consultar status"
+        title="Acompanhar solicitação"
         subtitle="Use o identificador e o token recebidos ao enviar a solicitação."
       />
       <div className="grid gap-6">
@@ -53,6 +53,6 @@ export function StatusLookupView() {
           </Card>
         )}
       </div>
-    </>
+    </div>
   );
 }

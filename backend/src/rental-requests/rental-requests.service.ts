@@ -7,11 +7,11 @@ import {
   generateConsultationToken,
   hashConsultationToken,
 } from '../common/consultation-token';
-import { CreateRequestDto } from './dto/create-request.dto';
+import { CreateRentalRequestDto } from './dto/create-rental-request.dto';
 import { ListQueryDto } from './dto/list-query.dto';
-import { UpdateRequestDto } from './dto/update-request.dto';
+import { UpdateRentalRequestDto } from './dto/update-rental-request.dto';
 import type { ValidatedUpload } from './parse-uploads.pipe';
-import { RequestFilesService } from './request-files.service';
+import { RentalRequestFilesService } from './rental-request-files.service';
 import {
   DetailView,
   ListItemView,
@@ -20,18 +20,18 @@ import {
   toDetail,
   toListItem,
   toPublicStatus,
-} from './request.mappers';
-import { Request } from './schemas/request.schema';
+} from './rental-request.mappers';
+import { RentalRequest } from './schemas/rental-request.schema';
 import {
   canTransition,
   EDITABLE_STATUSES,
-  RequestStatus,
+  RentalRequestStatus,
 } from './status-transitions';
 
-export interface CreatedRequest {
+export interface CreatedRentalRequest {
   id: string;
   token: string;
-  status: RequestStatus;
+  status: RentalRequestStatus;
 }
 
 export interface Page<T> {
@@ -47,17 +47,18 @@ const notFound = () =>
   );
 
 @Injectable()
-export class RequestsService {
+export class RentalRequestsService {
   constructor(
-    @InjectModel(Request.name) private readonly model: Model<Request>,
-    private readonly files: RequestFilesService,
+    @InjectModel(RentalRequest.name)
+    private readonly model: Model<RentalRequest>,
+    private readonly files: RentalRequestFilesService,
   ) {}
 
   // id gerado antes: a chave no S3 ja nasce com ele; S3 antes do Mongo
   async create(
-    { name, email, phone, description }: CreateRequestDto,
+    { name, email, phone, description }: CreateRentalRequestDto,
     uploads: ValidatedUpload[],
-  ): Promise<CreatedRequest> {
+  ): Promise<CreatedRentalRequest> {
     const _id = new Types.ObjectId();
     const metas = await this.files.uploadAll(_id, uploads);
 
@@ -127,7 +128,7 @@ export class RequestsService {
     return toDetail(found);
   }
 
-  async update(id: string, dto: UpdateRequestDto): Promise<DetailView> {
+  async update(id: string, dto: UpdateRentalRequestDto): Promise<DetailView> {
     const updated = await this.model
       .findOneAndUpdate(
         { _id: id, status: { $in: EDITABLE_STATUSES } },
@@ -145,7 +146,10 @@ export class RequestsService {
     );
   }
 
-  async changeStatus(id: string, next: RequestStatus): Promise<DetailView> {
+  async changeStatus(
+    id: string,
+    next: RentalRequestStatus,
+  ): Promise<DetailView> {
     const current = await this.model.findById(id, { status: 1 }).lean();
     if (!current) throw notFound();
 

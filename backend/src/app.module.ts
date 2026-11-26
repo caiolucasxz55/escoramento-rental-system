@@ -5,7 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { EnvironmentVariables, validateEnv } from './config/env.validation';
 import { HealthController } from './health/health.controller';
-import { RequestsModule } from './requests/requests.module';
+import { RentalRequestsModule } from './rental-requests/rental-requests.module';
 
 @Module({
   imports: [
@@ -24,7 +24,7 @@ import { RequestsModule } from './requests/requests.module';
       errorMessage: 'Muitas requisicoes; tente novamente em instantes',
     }),
     AuthModule,
-    RequestsModule,
+    RentalRequestsModule,
   ],
   controllers: [HealthController],
 })

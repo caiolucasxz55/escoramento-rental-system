@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { MAX_FILES_PER_REQUEST } from '../file-validation';
-import { RequestStatus } from '../status-transitions';
+import { RentalRequestStatus } from '../status-transitions';
 
 export const PHONE_PATTERN = /^\d{10,13}$/;
 
@@ -27,8 +27,8 @@ export class FileMeta {
 
 export const FileMetaSchema = SchemaFactory.createForClass(FileMeta);
 
-@Schema({ collection: 'requests', timestamps: true })
-export class Request {
+@Schema({ collection: 'rental_requests', timestamps: true })
+export class RentalRequest {
   _id: Types.ObjectId;
 
   @Prop({ required: true, trim: true, minlength: 2, maxlength: 120 })
@@ -47,10 +47,10 @@ export class Request {
   @Prop({
     type: String,
     required: true,
-    enum: Object.values(RequestStatus),
-    default: RequestStatus.PENDING,
+    enum: Object.values(RentalRequestStatus),
+    default: RentalRequestStatus.PENDING,
   })
-  status: RequestStatus;
+  status: RentalRequestStatus;
 
   @Prop({ required: true, select: false })
   consultationTokenHash: string;
@@ -69,15 +69,15 @@ export class Request {
   updatedAt: Date;
 }
 
-export type RequestDocument = HydratedDocument<Request>;
+export type RentalRequestDocument = HydratedDocument<RentalRequest>;
 
-export const RequestSchema = SchemaFactory.createForClass(Request);
+export const RentalRequestSchema = SchemaFactory.createForClass(RentalRequest);
 
-RequestSchema.index({ status: 1, createdAt: -1 });
-RequestSchema.index({ createdAt: -1 });
+RentalRequestSchema.index({ status: 1, createdAt: -1 });
+RentalRequestSchema.index({ createdAt: -1 });
 
 // rede de seguranca: as respostas saem pelos mappers, nao pelo documento
-RequestSchema.set('toJSON', {
+RentalRequestSchema.set('toJSON', {
   versionKey: false,
   transform: (_doc, ret) => {
     const { _id, consultationTokenHash: _hash, files, ...rest } = ret;

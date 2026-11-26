@@ -5,7 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
 import { EnvironmentVariables } from './config/env.validation';
-import { CONSULTATION_TOKEN_HEADER } from './requests/public-requests.controller';
+import { CONSULTATION_TOKEN_HEADER } from './rental-requests/public-rental-requests.controller';
 
 function setupSwagger(app: INestApplication): void {
   const document = SwaggerModule.createDocument(

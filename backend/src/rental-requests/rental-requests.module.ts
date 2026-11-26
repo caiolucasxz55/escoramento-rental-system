@@ -5,16 +5,21 @@ import { MulterModule } from '@nestjs/platform-express';
 import { AuthModule } from '../auth/auth.module';
 import { EnvironmentVariables } from '../config/env.validation';
 import { StorageModule } from '../storage/storage.module';
-import { AdminRequestsController } from './admin-requests.controller';
+import { AdminRentalRequestsController } from './admin-rental-requests.controller';
 import { MAX_FILES_PER_REQUEST, megabytesToBytes } from './file-validation';
-import { PublicRequestsController } from './public-requests.controller';
-import { RequestFilesService } from './request-files.service';
-import { RequestsService } from './requests.service';
-import { Request, RequestSchema } from './schemas/request.schema';
+import { PublicRentalRequestsController } from './public-rental-requests.controller';
+import { RentalRequestFilesService } from './rental-request-files.service';
+import { RentalRequestsService } from './rental-requests.service';
+import {
+  RentalRequest,
+  RentalRequestSchema,
+} from './schemas/rental-request.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Request.name, schema: RequestSchema }]),
+    MongooseModule.forFeature([
+      { name: RentalRequest.name, schema: RentalRequestSchema },
+    ]),
     // memoria (padrao); o limite corta o upload antes de ler tudo: 413
     MulterModule.registerAsync({
       inject: [ConfigService],
@@ -30,7 +35,7 @@ import { Request, RequestSchema } from './schemas/request.schema';
     AuthModule,
     StorageModule,
   ],
-  controllers: [PublicRequestsController, AdminRequestsController],
-  providers: [RequestsService, RequestFilesService],
+  controllers: [PublicRentalRequestsController, AdminRentalRequestsController],
+  providers: [RentalRequestsService, RentalRequestFilesService],
 })
-export class RequestsModule {}
+export class RentalRequestsModule {}

@@ -1,8 +1,8 @@
-import type { FileMeta, Request } from './schemas/request.schema';
-import type { RequestStatus } from './status-transitions';
+import type { FileMeta, RentalRequest } from './schemas/rental-request.schema';
+import type { RentalRequestStatus } from './status-transitions';
 
-type RequestData = Pick<
-  Request,
+type RentalRequestData = Pick<
+  RentalRequest,
   | '_id'
   | 'name'
   | 'email'
@@ -16,7 +16,7 @@ type RequestData = Pick<
 
 export interface PublicStatusView {
   id: string;
-  status: RequestStatus;
+  status: RentalRequestStatus;
   filesCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -25,7 +25,7 @@ export interface PublicStatusView {
 export interface ListItemView {
   id: string;
   name: string;
-  status: RequestStatus;
+  status: RentalRequestStatus;
   filesCount: number;
   createdAt: Date;
 }
@@ -44,19 +44,25 @@ export interface DetailView {
   email: string;
   phone: string;
   description: string;
-  status: RequestStatus;
+  status: RentalRequestStatus;
   files: FileView[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 // listagem vem com projecao: filesCount calculado no Mongo, sem files
-export type ListRow = Pick<Request, '_id' | 'name' | 'status' | 'createdAt'> & {
+export type ListRow = Pick<
+  RentalRequest,
+  '_id' | 'name' | 'status' | 'createdAt'
+> & {
   filesCount: number;
 };
 
 export function toPublicStatus(
-  r: Pick<RequestData, '_id' | 'status' | 'files' | 'createdAt' | 'updatedAt'>,
+  r: Pick<
+    RentalRequestData,
+    '_id' | 'status' | 'files' | 'createdAt' | 'updatedAt'
+  >,
 ): PublicStatusView {
   return {
     id: String(r._id),
@@ -88,7 +94,7 @@ export function toFileView(f: FileMeta): FileView {
   };
 }
 
-export function toDetail(r: RequestData): DetailView {
+export function toDetail(r: RentalRequestData): DetailView {
   return {
     id: String(r._id),
     name: r.name,

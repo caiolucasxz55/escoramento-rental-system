@@ -20,11 +20,11 @@ import { AdminGuard } from '../auth/admin.guard';
 import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { ListQueryDto } from './dto/list-query.dto';
-import { UpdateRequestDto } from './dto/update-request.dto';
+import { UpdateRentalRequestDto } from './dto/update-rental-request.dto';
 import { MAX_FILES_PER_REQUEST } from './file-validation';
 import { ParseUploadsPipe, ValidatedUpload } from './parse-uploads.pipe';
-import { RequestFilesService } from './request-files.service';
-import { RequestsService } from './requests.service';
+import { RentalRequestFilesService } from './rental-request-files.service';
+import { RentalRequestsService } from './rental-requests.service';
 import { ApiFilesUpload, ApiSingleFileUpload } from './upload-docs';
 
 // guard no controller inteiro: nenhuma rota admin fica sem
@@ -32,28 +32,28 @@ import { ApiFilesUpload, ApiSingleFileUpload } from './upload-docs';
 @ApiBearerAuth()
 @UseGuards(AdminGuard)
 @Controller('admin/requests')
-export class AdminRequestsController {
+export class AdminRentalRequestsController {
   constructor(
-    private readonly requests: RequestsService,
-    private readonly files: RequestFilesService,
+    private readonly rentalRequests: RentalRequestsService,
+    private readonly files: RentalRequestFilesService,
   ) {}
 
   @Get()
   list(@Query() query: ListQueryDto) {
-    return this.requests.list(query);
+    return this.rentalRequests.list(query);
   }
 
   @Get(':id')
   findOne(@Param('id', ParseObjectIdPipe) id: string) {
-    return this.requests.findDetail(id);
+    return this.rentalRequests.findDetail(id);
   }
 
   @Patch(':id')
   update(
     @Param('id', ParseObjectIdPipe) id: string,
-    @Body() dto: UpdateRequestDto,
+    @Body() dto: UpdateRentalRequestDto,
   ) {
-    return this.requests.update(id, dto);
+    return this.rentalRequests.update(id, dto);
   }
 
   @Patch(':id/status')
@@ -61,7 +61,7 @@ export class AdminRequestsController {
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() { status }: ChangeStatusDto,
   ) {
-    return this.requests.changeStatus(id, status);
+    return this.rentalRequests.changeStatus(id, status);
   }
 
   @Post(':id/files')

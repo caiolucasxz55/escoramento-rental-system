@@ -2,14 +2,14 @@ import {
   canTransition,
   EDITABLE_STATUSES,
   isFinal,
-  RequestStatus,
+  RentalRequestStatus,
   TRANSITIONS,
 } from './status-transitions';
 
-const { PENDING, UNDER_REVIEW, APPROVED, CANCELLED } = RequestStatus;
+const { PENDING, UNDER_REVIEW, APPROVED, CANCELLED } = RentalRequestStatus;
 
 // 16 combinacoes; so 4 validas
-const CASES: Array<[RequestStatus, RequestStatus, boolean]> = [
+const CASES: Array<[RentalRequestStatus, RentalRequestStatus, boolean]> = [
   [PENDING, PENDING, false],
   [PENDING, UNDER_REVIEW, true],
   [PENDING, APPROVED, false],
@@ -34,7 +34,7 @@ describe('canTransition', () => {
   });
 
   it('a tabela cobre cada par origem x destino exatamente uma vez', () => {
-    const statuses = Object.values(RequestStatus);
+    const statuses = Object.values(RentalRequestStatus);
     const pairs = new Set(CASES.map(([from, to]) => `${from}->${to}`));
 
     expect(CASES).toHaveLength(statuses.length ** 2);

@@ -1,11 +1,11 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, Length, Matches } from 'class-validator';
-import { PHONE_PATTERN } from '../schemas/request.schema';
+import { PHONE_PATTERN } from '../schemas/rental-request.schema';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
-export class CreateRequestDto {
+export class CreateRentalRequestDto {
   /** @example "Construtora Exemplo Ltda" */
   @Transform(trim)
   @IsString()

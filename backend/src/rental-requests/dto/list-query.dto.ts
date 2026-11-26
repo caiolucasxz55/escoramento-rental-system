@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { RequestStatus } from '../status-transitions';
+import { RentalRequestStatus } from '../status-transitions';
 
 export const MAX_PAGE_SIZE = 50;
 
@@ -17,6 +17,6 @@ export class ListQueryDto {
   limit: number = 10;
 
   @IsOptional()
-  @IsEnum(RequestStatus)
-  status?: RequestStatus;
+  @IsEnum(RentalRequestStatus)
+  status?: RentalRequestStatus;
 }

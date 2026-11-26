@@ -3,10 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { Model, Types } from 'mongoose';
 import { InMemoryStorage } from '../storage/in-memory.storage';
 import type { ValidatedUpload } from './parse-uploads.pipe';
-import { RequestFilesService } from './request-files.service';
-import { RequestsService } from './requests.service';
-import type { Request } from './schemas/request.schema';
-import { RequestStatus } from './status-transitions';
+import { RentalRequestFilesService } from './rental-request-files.service';
+import { RentalRequestsService } from './rental-requests.service';
+import type { RentalRequest } from './schemas/rental-request.schema';
+import { RentalRequestStatus } from './status-transitions';
 
 const query = <T>(value: T | Error) => ({
   lean: () =>
@@ -24,10 +24,10 @@ const config = {
   get: () => 300,
 } as unknown as ConfigService;
 
-function setup(model: Partial<Record<keyof Model<Request>, jest.Mock>>) {
+function setup(model: Partial<Record<keyof Model<RentalRequest>, jest.Mock>>) {
   const storage = new InMemoryStorage();
-  const files = new RequestFilesService(
-    model as unknown as Model<Request>,
+  const files = new RentalRequestFilesService(
+    model as unknown as Model<RentalRequest>,
     storage,
     config as never,
   );
@@ -37,8 +37,8 @@ function setup(model: Partial<Record<keyof Model<Request>, jest.Mock>>) {
 const id = new Types.ObjectId();
 const fileId = new Types.ObjectId();
 const doc = (
-  status = RequestStatus.PENDING,
-  key = 'requests/x/antigo.pdf',
+  status = RentalRequestStatus.PENDING,
+  key = 'rental-requests/x/antigo.pdf',
 ) => ({
   _id: id,
   status,
@@ -56,7 +56,7 @@ const doc = (
   updatedAt: new Date(),
 });
 
-describe('RequestFilesService', () => {
+describe('RentalRequestFilesService', () => {
   let logError: jest.SpyInstance;
   beforeEach(() => {
     logError = jest
@@ -66,7 +66,7 @@ describe('RequestFilesService', () => {
   afterEach(() => jest.restoreAllMocks());
 
   describe('uploadAll', () => {
-    it('grava com chave requests/{id}/{uuid}.{ext}, sem o nome original', async () => {
+    it('grava com chave rental-requests/{id}/{uuid}.{ext}, sem o nome original', async () => {
       const { files, storage } = setup({});
 
       const [meta] = await files.uploadAll(id, [
@@ -74,7 +74,7 @@ describe('RequestFilesService', () => {
       ]);
 
       expect(meta.key).toMatch(
-        new RegExp(`^requests/${String(id)}/[0-9a-f-]{36}\\.pdf$`),
+        new RegExp(`^rental-requests/${String(id)}/[0-9a-f-]{36}\\.pdf$`),
       );
       expect(meta.key).not.toContain('passwd');
       expect(storage.objects.get(meta.key)?.contentType).toBe(
@@ -125,7 +125,7 @@ describe('RequestFilesService', () => {
     it('estado final: 409 REQUEST_NOT_EDITABLE e nada fica no storage', async () => {
       const { files, storage } = setup({
         findOneAndUpdate: jest.fn(() => query(null)),
-        findById: jest.fn(() => query(doc(RequestStatus.APPROVED))),
+        findById: jest.fn(() => query(doc(RentalRequestStatus.APPROVED))),
       });
 
       await expect(files.add(String(id), [upload()])).rejects.toMatchObject({
@@ -152,14 +152,14 @@ describe('RequestFilesService', () => {
         findOneAndUpdate: jest.fn(() => query(doc())),
       });
       await storage.put({
-        key: 'requests/x/antigo.pdf',
+        key: 'rental-requests/x/antigo.pdf',
         body: Buffer.alloc(1),
         contentType: 'application/pdf',
       });
 
       await files.remove(String(id), String(fileId));
 
-      expect(storage.objects.has('requests/x/antigo.pdf')).toBe(false);
+      expect(storage.objects.has('rental-requests/x/antigo.pdf')).toBe(false);
     });
 
     it('falha no DeleteObject apos o $pull: conclui e loga a chave orfa', async () => {
@@ -172,7 +172,7 @@ describe('RequestFilesService', () => {
         files.remove(String(id), String(fileId)),
       ).resolves.toBeUndefined();
       expect(logError).toHaveBeenCalledWith(
-        'Objeto orfao no storage: requests/x/antigo.pdf',
+        'Objeto orfao no storage: rental-requests/x/antigo.pdf',
         expect.any(String),
       );
     });
@@ -193,10 +193,10 @@ describe('RequestFilesService', () => {
     it('troca falhou: apaga o novo e mantem o antigo', async () => {
       const { files, storage } = setup({
         findOneAndUpdate: jest.fn(() => query(null)),
-        findById: jest.fn(() => query(doc(RequestStatus.CANCELLED))),
+        findById: jest.fn(() => query(doc(RentalRequestStatus.CANCELLED))),
       });
       await storage.put({
-        key: 'requests/x/antigo.pdf',
+        key: 'rental-requests/x/antigo.pdf',
         body: Buffer.alloc(1),
         contentType: 'application/pdf',
       });
@@ -204,12 +204,14 @@ describe('RequestFilesService', () => {
       await expect(
         files.replace(String(id), String(fileId), upload()),
       ).rejects.toMatchObject({ code: 'REQUEST_NOT_EDITABLE' });
-      expect([...storage.objects.keys()]).toEqual(['requests/x/antigo.pdf']);
+      expect([...storage.objects.keys()]).toEqual([
+        'rental-requests/x/antigo.pdf',
+      ]);
     });
   });
 });
 
-describe('RequestsService.create', () => {
+describe('RentalRequestsService.create', () => {
   it('Mongo falha apos o upload: storage.delete recebe as chaves enviadas', async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const model = {
@@ -217,8 +219,8 @@ describe('RequestsService.create', () => {
     };
     const { files, storage } = setup(model);
     const del = jest.spyOn(storage, 'delete');
-    const service = new RequestsService(
-      model as unknown as Model<Request>,
+    const service = new RentalRequestsService(
+      model as unknown as Model<RentalRequest>,
       files,
     );
 
@@ -234,7 +236,7 @@ describe('RequestsService.create', () => {
       ),
     ).rejects.toThrow('mongo caiu');
 
-    const sentKeys = (model.create.mock.calls[0][0] as Request).files.map(
+    const sentKeys = (model.create.mock.calls[0][0] as RentalRequest).files.map(
       (f) => f.key,
     );
     expect(del.mock.calls.map(([k]) => k).sort()).toEqual(sentKeys.sort());

@@ -8,8 +8,8 @@ import { EnvironmentVariables } from '../config/env.validation';
 import { STORAGE, type Storage } from '../storage/storage.interface';
 import { MAX_FILES_PER_REQUEST } from './file-validation';
 import type { ValidatedUpload } from './parse-uploads.pipe';
-import { DetailView, toDetail } from './request.mappers';
-import { FileMeta, Request } from './schemas/request.schema';
+import { DetailView, toDetail } from './rental-request.mappers';
+import { FileMeta, RentalRequest } from './schemas/rental-request.schema';
 import { EDITABLE_STATUSES, isFinal } from './status-transitions';
 
 export interface SignedUrl {
@@ -29,12 +29,13 @@ const noFiles = (message: string) =>
 // Mongo nunca aponta para objeto inexistente; no pior caso sobra um objeto
 // orfao (privado) no S3, logado com a chave.
 @Injectable()
-export class RequestFilesService {
-  private readonly logger = new Logger(RequestFilesService.name);
+export class RentalRequestFilesService {
+  private readonly logger = new Logger(RentalRequestFilesService.name);
   private readonly signedUrlTtl: number;
 
   constructor(
-    @InjectModel(Request.name) private readonly model: Model<Request>,
+    @InjectModel(RentalRequest.name)
+    private readonly model: Model<RentalRequest>,
     @Inject(STORAGE) private readonly storage: Storage,
     config: ConfigService<EnvironmentVariables, true>,
   ) {
@@ -43,13 +44,13 @@ export class RequestFilesService {
 
   // tudo ou nada: se um envio falhar, apaga os que ja subiram
   async uploadAll(
-    requestId: Types.ObjectId,
+    rentalRequestId: Types.ObjectId,
     uploads: ValidatedUpload[],
   ): Promise<FileMeta[]> {
     const sent: FileMeta[] = [];
     try {
       for (const upload of uploads) {
-        const meta = this.toMeta(requestId, upload);
+        const meta = this.toMeta(rentalRequestId, upload);
         await this.storage.put({
           key: meta.key,
           body: upload.buffer,
@@ -160,11 +161,14 @@ export class RequestFilesService {
     return { url, expiresIn: this.signedUrlTtl };
   }
 
-  private toMeta(requestId: Types.ObjectId, upload: ValidatedUpload): FileMeta {
+  private toMeta(
+    rentalRequestId: Types.ObjectId,
+    upload: ValidatedUpload,
+  ): FileMeta {
     return {
       _id: new Types.ObjectId(),
       // nome original nunca entra na chave
-      key: `requests/${String(requestId)}/${randomUUID()}${upload.type.ext}`,
+      key: `rental-requests/${String(rentalRequestId)}/${randomUUID()}${upload.type.ext}`,
       originalName: upload.originalName,
       mimeType: upload.type.mimeType,
       size: upload.size,
@@ -188,7 +192,7 @@ export class RequestFilesService {
     return result;
   }
 
-  private keyOf(doc: Pick<Request, 'files'>, fileId: string): string {
+  private keyOf(doc: Pick<RentalRequest, 'files'>, fileId: string): string {
     return doc.files.find((f) => String(f._id) === fileId)!.key;
   }
 

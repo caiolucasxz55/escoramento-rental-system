@@ -1,12 +1,12 @@
 import { model, Types } from 'mongoose';
-import { RequestStatus } from '../status-transitions';
-import { Request, RequestSchema } from './request.schema';
+import { RentalRequestStatus } from '../status-transitions';
+import { RentalRequest, RentalRequestSchema } from './rental-request.schema';
 
 // modelo sem conexao: validateSync e toJSON nao tocam o banco
-const RequestModel = model(Request.name, RequestSchema);
+const RentalRequestModel = model(RentalRequest.name, RentalRequestSchema);
 
 const file = (n: number) => ({
-  key: `requests/x/${n}.pdf`,
+  key: `rental-requests/x/${n}.pdf`,
   originalName: `doc-${n}.pdf`,
   mimeType: 'application/pdf',
   size: 100,
@@ -20,21 +20,21 @@ const base = {
   consultationTokenHash: 'a'.repeat(64),
 };
 
-describe('RequestSchema', () => {
+describe('RentalRequestSchema', () => {
   it('aceita uma solicitacao valida com status PENDING por padrao', () => {
-    const doc = new RequestModel(base);
+    const doc = new RentalRequestModel(base);
 
     expect(doc.validateSync()).toBeUndefined();
-    expect(doc.status).toBe(RequestStatus.PENDING);
+    expect(doc.status).toBe(RentalRequestStatus.PENDING);
     expect(doc.email).toBe('contato@exemplo.com');
   });
 
   it('aceita 5 arquivos e recusa 6', () => {
-    const five = new RequestModel({
+    const five = new RentalRequestModel({
       ...base,
       files: [1, 2, 3, 4, 5].map(file),
     });
-    const six = new RequestModel({
+    const six = new RentalRequestModel({
       ...base,
       files: [1, 2, 3, 4, 5, 6].map(file),
     });
@@ -46,20 +46,20 @@ describe('RequestSchema', () => {
   it.each(['119876543', '11987654321000', '(11) 98765-4321'])(
     'recusa telefone %s (so 10 a 13 digitos)',
     (phone) => {
-      const doc = new RequestModel({ ...base, phone });
+      const doc = new RentalRequestModel({ ...base, phone });
 
       expect(doc.validateSync()?.errors.phone).toBeDefined();
     },
   );
 
   it('recusa status fora do enum', () => {
-    const doc = new RequestModel({ ...base, status: 'ARCHIVED' });
+    const doc = new RentalRequestModel({ ...base, status: 'ARCHIVED' });
 
     expect(doc.validateSync()?.errors.status).toBeDefined();
   });
 
   it('toJSON expoe id e esconde hash, __v e chave do S3', () => {
-    const json = new RequestModel({
+    const json = new RentalRequestModel({
       ...base,
       files: [file(1)],
     }).toJSON() as Record<string, unknown> & {
@@ -76,20 +76,20 @@ describe('RequestSchema', () => {
   });
 
   it('declara os indices de listagem', () => {
-    const indexes = RequestSchema.indexes().map(([fields]) => fields);
+    const indexes = RentalRequestSchema.indexes().map(([fields]) => fields);
 
     expect(indexes).toContainEqual({ status: 1, createdAt: -1 });
     expect(indexes).toContainEqual({ createdAt: -1 });
   });
 
   it('nao seleciona o hash do token por padrao', () => {
-    expect(RequestSchema.path('consultationTokenHash').options.select).toBe(
-      false,
-    );
+    expect(
+      RentalRequestSchema.path('consultationTokenHash').options.select,
+    ).toBe(false);
   });
 
   it('gera ObjectId para cada arquivo (usado como fileId)', () => {
-    const doc = new RequestModel({ ...base, files: [file(1)] });
+    const doc = new RentalRequestModel({ ...base, files: [file(1)] });
 
     expect(doc.files[0]._id).toBeInstanceOf(Types.ObjectId);
   });

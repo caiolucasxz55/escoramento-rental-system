@@ -1,20 +1,24 @@
 import { Types } from 'mongoose';
-import { toDetail, toListItem, toPublicStatus } from './request.mappers';
-import { RequestStatus } from './status-transitions';
+import {
+  toDetail,
+  toListItem,
+  toPublicStatus,
+} from './rental-request.mappers';
+import { RentalRequestStatus } from './status-transitions';
 
 const now = new Date('2026-11-25T18:00:00.000Z');
 const fileId = new Types.ObjectId();
-const request = {
+const rentalRequest = {
   _id: new Types.ObjectId(),
   name: 'Construtora Teste',
   email: 'contato@exemplo.com',
   phone: '11987654321',
   description: 'Preciso de escoras por 30 dias.',
-  status: RequestStatus.PENDING,
+  status: RentalRequestStatus.PENDING,
   files: [
     {
       _id: fileId,
-      key: 'requests/abc/segredo.pdf',
+      key: 'rental-requests/abc/segredo.pdf',
       originalName: 'contrato.pdf',
       mimeType: 'application/pdf',
       size: 1234,
@@ -27,9 +31,9 @@ const request = {
 
 describe('mappers', () => {
   it('toPublicStatus so expoe o resumo publico (H3)', () => {
-    expect(toPublicStatus(request)).toEqual({
-      id: String(request._id),
-      status: RequestStatus.PENDING,
+    expect(toPublicStatus(rentalRequest)).toEqual({
+      id: String(rentalRequest._id),
+      status: RentalRequestStatus.PENDING,
       filesCount: 1,
       createdAt: now,
       updatedAt: now,
@@ -39,23 +43,23 @@ describe('mappers', () => {
   it('toListItem usa o filesCount da projecao', () => {
     expect(
       toListItem({
-        _id: request._id,
-        name: request.name,
-        status: request.status,
+        _id: rentalRequest._id,
+        name: rentalRequest.name,
+        status: rentalRequest.status,
         createdAt: now,
         filesCount: 3,
       }),
     ).toEqual({
-      id: String(request._id),
+      id: String(rentalRequest._id),
       name: 'Construtora Teste',
-      status: RequestStatus.PENDING,
+      status: RentalRequestStatus.PENDING,
       filesCount: 3,
       createdAt: now,
     });
   });
 
   it('toDetail inclui os arquivos sem a chave do S3', () => {
-    const detail = toDetail(request);
+    const detail = toDetail(rentalRequest);
 
     expect(detail.files).toEqual([
       {

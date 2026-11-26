@@ -22,7 +22,9 @@ export const esmCompat: Pick<Config, 'transform' | 'transformIgnorePatterns'> =
           babelrc: false,
           configFile: false,
           plugins: [
-            'babel-plugin-transform-import-meta',
+            // ES6: importa `url` no topo; o modo padrao injeta require('url'),
+            // que colide com modulos que declaram `const require` (swagger-ui)
+            ['babel-plugin-transform-import-meta', { module: 'ES6' }],
             '@babel/plugin-transform-modules-commonjs',
           ],
         },

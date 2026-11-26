@@ -41,33 +41,7 @@ export function changeStatus(
   });
 }
 
-export function addFiles(id: string, files: File[]): Promise<RentalRequestDetail> {
-  const formData = new FormData();
-  for (const file of files) formData.append("files", file);
-  return apiFetch(`${base(id)}/files`, { method: "POST", formData, auth: true });
-}
-
-export function replaceFile(
-  id: string,
-  fileId: string,
-  file: File,
-): Promise<RentalRequestDetail> {
-  const formData = new FormData();
-  formData.append("file", file);
-  return apiFetch(`${base(id)}/files/${encodeURIComponent(fileId)}`, {
-    method: "PUT",
-    formData,
-    auth: true,
-  });
-}
-
-export function removeFile(id: string, fileId: string): Promise<void> {
-  return apiFetch(`${base(id)}/files/${encodeURIComponent(fileId)}`, {
-    method: "DELETE",
-    auth: true,
-  });
-}
-
+// adicionar/substituir/remover arquivo existem na API, mas a tela do admin so consulta
 export function getFileUrl(id: string, fileId: string): Promise<SignedUrl> {
   return apiFetch(`${base(id)}/files/${encodeURIComponent(fileId)}/url`, {
     auth: true,

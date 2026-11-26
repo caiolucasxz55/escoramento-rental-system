@@ -9,10 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { demoCredentials } from "@/lib/demo-credentials";
 import { errorMessage } from "@/lib/error-messages";
 import { useAdminSession } from "@/store/admin-session";
 
+import { DemoCredentialsHint } from "./demo-credentials-hint";
+
 const ADMIN_HOME = "/admin";
+const demo = demoCredentials();
 
 export function LoginView() {
   const { token, login } = useAdminSession();
@@ -46,6 +50,16 @@ export function LoginView() {
         </span>
         <h1 className="text-xl font-semibold text-ink">Área administrativa</h1>
         <p className="mt-1 text-sm text-ink-muted">Entre para gerenciar as solicitações.</p>
+        {demo && (
+          <DemoCredentialsHint
+            credentials={demo}
+            onUse={(credentials) => {
+              setEmail(credentials.email);
+              setPassword(credentials.password);
+              setError(null);
+            }}
+          />
+        )}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <Field label="E-mail" htmlFor="login-email" required>
             <Input

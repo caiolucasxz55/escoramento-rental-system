@@ -17,11 +17,8 @@ describe("validateFiles", () => {
     ).toBeNull();
   });
 
-  it("recusa o 6o arquivo, contando os ja anexados", () => {
+  it("recusa o 6o arquivo", () => {
     expect(validateFiles(Array.from({ length: 6 }, () => file("a.pdf")))).toMatch(
-      /no máximo 5/,
-    );
-    expect(validateFiles([file("a.pdf"), file("b.pdf")], 4)).toMatch(
       /no máximo 5/,
     );
   });

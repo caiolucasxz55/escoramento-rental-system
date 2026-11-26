@@ -60,15 +60,9 @@ export function RentalRequestDetailView() {
       />
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-6">
-          {/* key no status: recomeca so quando trava; mexer em arquivo nao apaga edicao em curso */}
+          {/* key no status: o form recomeca quando a solicitacao trava (estado final) */}
           <RentalRequestDataForm key={request.status} request={request} onSaved={setData} />
-          <FilesPanel
-            request={request}
-            onChanged={setData}
-            onRemoved={(fileId) =>
-              setData({ ...request, files: request.files.filter((f) => f.id !== fileId) })
-            }
-          />
+          <FilesPanel request={request} />
         </div>
         <div>
           <StatusActions request={request} onChanged={setData} onConflict={reload} />

@@ -12,12 +12,9 @@ type FileLike = Pick<File, "name" | "size">;
 const hasAcceptedExtension = (name: string) =>
   ACCEPTED_EXTENSIONS.some((ext) => name.toLowerCase().endsWith(ext));
 
-// primeira violacao encontrada, ou null; `alreadyAttached` conta o que ja existe
-export function validateFiles(
-  files: FileLike[],
-  alreadyAttached = 0,
-): string | null {
-  if (files.length + alreadyAttached > MAX_FILES) {
+// primeira violacao encontrada, ou null
+export function validateFiles(files: FileLike[]): string | null {
+  if (files.length > MAX_FILES) {
     return `Envie no máximo ${MAX_FILES} arquivos por solicitação.`;
   }
   const empty = files.find((f) => f.size === 0);

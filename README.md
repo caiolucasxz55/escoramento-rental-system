@@ -53,7 +53,7 @@ npm test            # lógica pura do frontend (Vitest)
 
 A primeira execução do `test:e2e` baixa o binário do MongoDB uma vez (fica em cache).
 
-**Admin de demonstração:** `admin@escoramento.local` com a senha usada no `npm run hash-password` (no exemplo acima, `admin123`).
+**Admin de demonstração:** `admin@escoramento.local` com a senha usada no `npm run hash-password` (no exemplo acima, `admin123`). Com o `frontend/.env.example` copiado, a tela de login mostra essas credenciais e um botão para preencher.
 
 ## Variáveis de ambiente
 
@@ -83,6 +83,8 @@ Frontend (`frontend/.env.example`):
 | Variável | Exemplo | Uso |
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:3001/api` | Base da API |
+| `NEXT_PUBLIC_DEMO_ADMIN_EMAIL` | `admin@escoramento.local` | Opcional: e-mail mostrado na tela de login (demo) |
+| `NEXT_PUBLIC_DEMO_ADMIN_PASSWORD` | `admin123` | Opcional: senha mostrada na tela de login (demo); vazia em produção |
 
 A API não sobe se faltar uma variável obrigatória: o erro diz qual.
 
@@ -143,6 +145,8 @@ Todo erro sai no mesmo formato, com um código estável em `error`:
 
 **Frontend.** Páginas finas que só renderizam a view de cada feature; primitivas de UI em `components/ui/`; um único cliente HTTP (`lib/api/client.ts`) que injeta o JWT, transforma o erro da API em `ApiError` e encerra a sessão no 401; mensagens escolhidas pelo código de erro, não pelo texto. O JWT fica em `sessionStorage` (trade-off em Limitações). Filtro e página da listagem ficam na query string.
 
+**Documentos na tela do admin: só consulta.** Na interface, o papel do admin é verificar o pedido: ele abre os documentos enviados pelo cliente (URL assinada), edita dados e muda o status, mas não adiciona, substitui nem remove arquivos. As rotas de gerenciamento de arquivos (H1) continuam na API, com testes de unidade e integração e demonstráveis pelo Swagger e pelo `requests.http`; deixá-las fora da UI segue a orientação do próprio plano de entrega.
+
 **Ambiente.**
 - A MinIO deixou de publicar `minio/minio` no Docker Hub; o compose usa `cgr.dev/chainguard/minio`, o mesmo servidor, mantido e com o `mc` embutido.
 - Os pacotes do Nest 12 são só ESM; para os testes rodarem no Node 22, o Jest converte `@nestjs/*` para CommonJS só durante o teste (`jest.config.ts`).
@@ -186,7 +190,9 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 - **Sem testes de componente no frontend:** só a lógica pura (`lib/`) é testada.
 - **Rate limit por instância:** fica em memória; com várias instâncias, cada uma conta separado.
 - **Sem busca:** a listagem filtra só por status, sem busca textual.
-- **Confirmações nativas:** aprovar, cancelar e remover arquivo usam o `confirm` do navegador.
+- **Confirmações nativas:** aprovar e cancelar usam o `confirm` do navegador.
+- **Gerenciamento de arquivos só pela API:** adicionar, substituir e remover documentos existem na API (Swagger e `requests.http`), mas não na tela do admin, que é de verificação.
+- **Credenciais de demo na tela de login:** existem para facilitar a avaliação e só aparecem com as variáveis `NEXT_PUBLIC_DEMO_ADMIN_*`; em produção ficam vazias.
 - **Design visual simples:** prioridade foi o fluxo funcional; a identidade visual se resume à paleta.
 
 ## O que eu faria com mais tempo

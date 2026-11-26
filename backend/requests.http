@@ -134,6 +134,10 @@ Content-Type: application/pdf
 GET {{api}}/admin/requests/{{id}}/files/{{fileId}}/url
 Authorization: Bearer {{accessToken}}
 
+### URL assinada para visualizar (inline, usada no preview do admin)
+GET {{api}}/admin/requests/{{id}}/files/{{fileId}}/url?disposition=inline
+Authorization: Bearer {{accessToken}}
+
 ### Remover arquivo (204)
 DELETE {{api}}/admin/requests/{{id}}/files/{{fileId}}
 Authorization: Bearer {{accessToken}}

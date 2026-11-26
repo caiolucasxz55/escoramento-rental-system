@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { parseListQuery, toQueryString } from "./list-query";
+import { pageRange, parseListQuery, toQueryString } from "./list-query";
+
+describe("pageRange", () => {
+  it.each([
+    [{ page: 1, limit: 10, total: 35 }, { from: 1, to: 10, total: 35 }],
+    [{ page: 4, limit: 10, total: 35 }, { from: 31, to: 35, total: 35 }],
+    [{ page: 1, limit: 10, total: 0 }, { from: 0, to: 0, total: 0 }],
+    [{ page: 9, limit: 10, total: 35 }, { from: 35, to: 35, total: 35 }],
+  ])("%j -> %j", (meta, expected) => {
+    expect(pageRange(meta)).toEqual(expected);
+  });
+});
 
 const params = (qs: string) => new URLSearchParams(qs);
 

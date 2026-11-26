@@ -2,7 +2,7 @@
 
 Módulo full stack para clientes solicitarem a locação de escoramento (com até 5 documentos) e acompanharem o status, e para o admin analisar, editar, mudar status e gerenciar os documentos. O foco está nas regras de negócio no backend, no acesso seguro aos documentos e nos testes.
 
-**Stack:** NestJS 12 + TypeScript · MongoDB (Mongoose) · S3 (AWS SDK v3; MinIO no ambiente local) · Next.js 16 (App Router) + Tailwind · Jest, Supertest e mongodb-memory-server · Vitest · Swagger.
+**Stack:** NestJS 12 + TypeScript · MongoDB (Mongoose) · S3 (AWS SDK v3; MinIO no ambiente local) · Next.js 16 (App Router) + Tailwind · pdf.js · Jest, Supertest e mongodb-memory-server · Vitest · Swagger.
 
 ## Pré-requisitos
 
@@ -94,6 +94,12 @@ A API não sobe se faltar uma variável obrigatória: o erro diz qual.
 
 **AWS real:** crie o bucket com *Block Public Access* ligado e um usuário IAM só com `s3:PutObject`, `s3:GetObject` e `s3:DeleteObject` em `arn:aws:s3:::SEU_BUCKET/rental-requests/*`. Preencha `S3_BUCKET`, `S3_REGION` e as credenciais, deixe `S3_ENDPOINT` e `S3_PUBLIC_ENDPOINT` vazios e use `S3_FORCE_PATH_STYLE=false`. Nenhuma linha de código muda.
 
+O preview de PDF baixa o arquivo pelo navegador (pdf.js), então o bucket precisa de uma regra de CORS liberando `GET` para a origem do frontend (o MinIO local já libera):
+
+```json
+[{ "AllowedOrigins": ["https://seu-frontend"], "AllowedMethods": ["GET"], "AllowedHeaders": ["Range"], "ExposeHeaders": ["Content-Range", "Accept-Ranges"] }]
+```
+
 ## Endpoints
 
 Documentação interativa em **`/api/docs`** (Swagger) e exemplos prontos em [`backend/requests.http`](backend/requests.http), com arquivos de exemplo em `backend/samples/`.
@@ -140,12 +146,14 @@ Todo erro sai no mesmo formato, com um código estável em `error`:
 **Segurança.**
 - **Token de consulta**: 256 bits aleatórios, exibido uma vez; o banco guarda só o SHA-256 (bcrypt não agrega com token longo e aleatório). Vai no header `X-Consultation-Token`, nunca na URL, e é comparado com `timingSafeEqual`. Token errado e id inexistente devolvem o mesmo 404, para não revelar quais ids existem.
 - **Admin**: login com bcrypt e JWT de 1h. A senha é comparada mesmo com e-mail errado, para o tempo de resposta não revelar o e-mail.
-- **Documentos**: bucket sem acesso anônimo; download só por URL assinada de 5 minutos, com `Content-Disposition: attachment` e o nome original sanitizado. A URL é gerada com `S3_PUBLIC_ENDPOINT`, porque o navegador não resolve o host interno do MinIO.
+- **Documentos**: bucket sem acesso anônimo; acesso só por URL assinada de 5 minutos, com o nome original sanitizado e o tipo detectado no upload. A rota aceita `?disposition=inline` (visualizar) ou `attachment` (padrão, baixar). A URL é gerada com `S3_PUBLIC_ENDPOINT`, porque o navegador não resolve o host interno do MinIO.
 - **API**: `ValidationPipe` com `whitelist` e `forbidNonWhitelisted` (campo extra dá 400), ids validados antes de chegar ao Mongo, `helmet`, CORS restrito a `FRONTEND_URL`, rate limit de 10/min por IP no login e na consulta pública, e erro inesperado como 500 genérico sem stack.
 
 **Frontend.** Páginas finas que só renderizam a view de cada feature; primitivas de UI em `components/ui/`; um único cliente HTTP (`lib/api/client.ts`) que injeta o JWT, transforma o erro da API em `ApiError` e encerra a sessão no 401; mensagens escolhidas pelo código de erro, não pelo texto. O JWT fica em `sessionStorage` (trade-off em Limitações). Filtro e página da listagem ficam na query string.
 
-**Documentos na tela do admin: só consulta.** Na interface, o papel do admin é verificar o pedido: ele abre os documentos enviados pelo cliente (URL assinada), edita dados e muda o status, mas não adiciona, substitui nem remove arquivos. As rotas de gerenciamento de arquivos (H1) continuam na API, com testes de unidade e integração e demonstráveis pelo Swagger e pelo `requests.http`; deixá-las fora da UI segue a orientação do próprio plano de entrega.
+**Documentos na tela do admin: só consulta.** Na interface, o papel do admin é verificar o pedido: ele visualiza os documentos enviados pelo cliente, edita dados e muda o status, mas não adiciona, substitui nem remove arquivos. As rotas de gerenciamento de arquivos (H1) continuam na API, com testes de unidade e integração e demonstráveis pelo Swagger e pelo `requests.http`; deixá-las fora da UI segue a orientação do próprio plano de entrega.
+
+**Visualização segura de documentos.** O admin vê os arquivos num preview dentro do sistema, sem baixá-los: o PDF é desenhado em `<canvas>` pelo pdf.js (o JavaScript do documento nunca executa e nenhum leitor de PDF do sistema é acionado) e a imagem aparece borrada até o admin clicar em "Mostrar". Baixar continua possível, como ação explícita e com aviso. Isso reduz o risco de um PDF malicioso explorar o leitor instalado e de conteúdo impróprio aparecer sem aviso.
 
 **Ambiente.**
 - A MinIO deixou de publicar `minio/minio` no Docker Hub; o compose usa `cgr.dev/chainguard/minio`, o mesmo servidor, mantido e com o `mc` embutido.
@@ -191,6 +199,7 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 - **Rate limit por instância:** fica em memória; com várias instâncias, cada uma conta separado.
 - **Sem busca:** a listagem filtra só por status, sem busca textual.
 - **Confirmações nativas:** aprovar e cancelar usam o `confirm` do navegador.
+- **Sem antivírus:** o preview seguro e a validação por magic bytes reduzem o risco, mas não detectam um arquivo malicioso; quem baixar e abrir fora do sistema ainda depende do próprio antivírus.
 - **Gerenciamento de arquivos só pela API:** adicionar, substituir e remover documentos existem na API (Swagger e `requests.http`), mas não na tela do admin, que é de verificação.
 - **Credenciais de demo na tela de login:** existem para facilitar a avaliação e só aparecem com as variáveis `NEXT_PUBLIC_DEMO_ADMIN_*`; em produção ficam vazias.
 - **Design visual simples:** prioridade foi o fluxo funcional; a identidade visual se resume à paleta.

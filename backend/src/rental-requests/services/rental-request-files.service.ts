@@ -5,7 +5,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AppException } from '../../common/app-exception';
 import { EnvironmentVariables } from '../../config/env.validation';
-import { STORAGE, type Storage } from '../../storage/storage.interface';
+import {
+  STORAGE,
+  type Disposition,
+  type Storage,
+} from '../../storage/storage.interface';
 import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
 import type { ValidatedUpload } from '../pipes/parse-uploads.pipe';
 import { DetailView, toDetail } from '../mappers/rental-request.mappers';
@@ -146,7 +150,11 @@ export class RentalRequestFilesService {
     return toDetail(fresh);
   }
 
-  async signedUrl(id: string, fileId: string): Promise<SignedUrl> {
+  async signedUrl(
+    id: string,
+    fileId: string,
+    disposition: Disposition = 'attachment',
+  ): Promise<SignedUrl> {
     const found = await this.model
       .findOne({ _id: id, 'files._id': fileId }, { 'files.$': 1 })
       .lean();
@@ -157,6 +165,7 @@ export class RentalRequestFilesService {
       filename: file.originalName,
       contentType: file.mimeType,
       expiresInSeconds: this.signedUrlTtl,
+      disposition,
     });
     return { url, expiresIn: this.signedUrlTtl };
   }

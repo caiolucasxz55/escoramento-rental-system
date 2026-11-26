@@ -7,10 +7,15 @@ export interface PutObjectInput {
   contentType: string;
 }
 
+// inline: o navegador exibe (preview); attachment: forca o download
+export const DISPOSITIONS = ['inline', 'attachment'] as const;
+export type Disposition = (typeof DISPOSITIONS)[number];
+
 export interface SignedDownloadOptions {
   filename: string;
   contentType: string;
   expiresInSeconds: number;
+  disposition: Disposition;
 }
 
 export interface Storage {

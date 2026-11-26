@@ -145,6 +145,36 @@ describe('Arquivos no admin (e2e)', () => {
         url: expect.stringContaining('rental-requests/'),
         expiresIn: 300,
       });
+      // sem parametro continua forcando o download
+      expect((res.body as { url: string }).url).toContain(
+        'disposition=attachment',
+      );
+    });
+
+    it('disposition=inline gera URL de visualizacao', async () => {
+      const id = await create([pdf()]);
+      const [file] = (await detail(id)).files;
+
+      const res = await t
+        .http()
+        .get(
+          `/api/admin/requests/${id}/files/${file.id}/url?disposition=inline`,
+        )
+        .set(auth())
+        .expect(200);
+
+      expect((res.body as { url: string }).url).toContain('disposition=inline');
+    });
+
+    it('disposition invalido: 400', async () => {
+      const id = await create([pdf()]);
+      const [file] = (await detail(id)).files;
+
+      await t
+        .http()
+        .get(`/api/admin/requests/${id}/files/${file.id}/url?disposition=evil`)
+        .set(auth())
+        .expect(400);
     });
 
     it('arquivo de outra solicitacao: 404', async () => {

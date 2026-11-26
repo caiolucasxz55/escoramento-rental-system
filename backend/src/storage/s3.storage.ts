@@ -8,7 +8,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EnvironmentVariables } from '../config/env.validation';
-import { attachmentDisposition } from './content-disposition';
+import { buildContentDisposition } from './content-disposition';
 import {
   PutObjectInput,
   SignedDownloadOptions,
@@ -62,14 +62,22 @@ export class S3Storage implements Storage {
 
   getSignedDownloadUrl(
     key: string,
-    { filename, contentType, expiresInSeconds }: SignedDownloadOptions,
+    {
+      filename,
+      contentType,
+      expiresInSeconds,
+      disposition,
+    }: SignedDownloadOptions,
   ): Promise<string> {
     return getSignedUrl(
       this.signer,
       new GetObjectCommand({
         Bucket: this.bucket,
         Key: key,
-        ResponseContentDisposition: attachmentDisposition(filename),
+        ResponseContentDisposition: buildContentDisposition(
+          disposition,
+          filename,
+        ),
         ResponseContentType: contentType,
       }),
       { expiresIn: expiresInSeconds },

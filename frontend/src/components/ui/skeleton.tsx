@@ -8,7 +8,7 @@ export function ListSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div role="status" aria-label="Carregando" className="divide-y divide-line">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex items-center gap-4 px-4 py-4">
+        <div key={i} className="flex items-center gap-4 px-6 py-5">
           <Skeleton className="h-4 flex-1" />
           <Skeleton className="h-5 w-20 rounded-full" />
           <Skeleton className="hidden h-4 w-24 sm:block" />

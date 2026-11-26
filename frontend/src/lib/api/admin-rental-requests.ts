@@ -41,9 +41,15 @@ export function changeStatus(
   });
 }
 
-// adicionar/substituir/remover arquivo existem na API, mas a tela do admin so consulta
-export function getFileUrl(id: string, fileId: string): Promise<SignedUrl> {
+// adicionar/substituir/remover arquivo existem na API, mas a tela do admin so consulta.
+// inline: para o preview; attachment: download explicito
+export function getFileUrl(
+  id: string,
+  fileId: string,
+  disposition: "inline" | "attachment",
+): Promise<SignedUrl> {
   return apiFetch(`${base(id)}/files/${encodeURIComponent(fileId)}/url`, {
+    params: { disposition },
     auth: true,
   });
 }

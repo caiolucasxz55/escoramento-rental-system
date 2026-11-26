@@ -22,10 +22,10 @@ export class InMemoryStorage implements Storage {
 
   getSignedDownloadUrl(
     key: string,
-    { expiresInSeconds }: SignedDownloadOptions,
+    { expiresInSeconds, disposition }: SignedDownloadOptions,
   ): Promise<string> {
     return Promise.resolve(
-      `memory://${key}?expires=${String(expiresInSeconds)}`,
+      `memory://${key}?expires=${String(expiresInSeconds)}&disposition=${disposition}`,
     );
   }
 }

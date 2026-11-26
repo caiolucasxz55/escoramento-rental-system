@@ -6,7 +6,7 @@ import { NavLink } from "./nav-link";
 export function PublicShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-line bg-surface">
+      <header className="border-t-4 border-b border-t-brand-500 border-b-line bg-surface">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-4 px-4">
           <Link href="/" className="font-semibold text-ink">
             Escoramento

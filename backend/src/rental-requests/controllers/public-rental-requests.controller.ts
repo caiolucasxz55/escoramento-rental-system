@@ -10,7 +10,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiHeader, ApiTags } from '@nestjs/swagger';
+import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ParseObjectIdPipe } from '../../common/parse-object-id.pipe';
 import { CreateRentalRequestDto } from '../dto/create-rental-request.dto';
@@ -27,6 +27,9 @@ export class PublicRentalRequestsController {
   constructor(private readonly rentalRequests: RentalRequestsService) {}
 
   @Post()
+  @ApiOperation({
+    summary: 'Cria a solicitacao (ate 5 arquivos); token aparece so aqui',
+  })
   @ApiCreateWithFiles()
   @UseInterceptors(FilesInterceptor('files', MAX_FILES_PER_REQUEST))
   create(
@@ -38,6 +41,7 @@ export class PublicRentalRequestsController {
 
   // token no header, nunca na query string (logs e historico)
   @Get(':id/status')
+  @ApiOperation({ summary: 'Status publico com o token no header' })
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiHeader({ name: CONSULTATION_TOKEN_HEADER, required: true })

@@ -1,0 +1,139 @@
+# Exemplos de todos os endpoints. Funciona no VS Code (REST Client) e no IntelliJ.
+# Ordem sugerida: health -> criar -> login -> admin. Copie os valores devolvidos
+# para as variaveis abaixo (id, token, accessToken, fileId).
+
+@api = http://localhost:3001/api
+@id = cole-o-id-aqui
+@token = cole-o-token-aqui
+@accessToken = cole-o-accessToken-aqui
+@fileId = cole-o-fileId-aqui
+
+### Health: API e Mongo
+GET {{api}}/health
+
+### Criar solicitacao com 2 arquivos (201: id, token, status)
+POST {{api}}/public/requests
+Content-Type: multipart/form-data; boundary=FormBoundary
+
+--FormBoundary
+Content-Disposition: form-data; name="name"
+
+Construtora Exemplo Ltda
+--FormBoundary
+Content-Disposition: form-data; name="email"
+
+contato@exemplo.com
+--FormBoundary
+Content-Disposition: form-data; name="phone"
+
+(11) 98765-4321
+--FormBoundary
+Content-Disposition: form-data; name="description"
+
+Preciso de 40 escoras metalicas por 30 dias para a obra X.
+--FormBoundary
+Content-Disposition: form-data; name="files"; filename="contrato.pdf"
+Content-Type: application/pdf
+
+< ./samples/contrato.pdf
+--FormBoundary
+Content-Disposition: form-data; name="files"; filename="foto.png"
+Content-Type: image/png
+
+< ./samples/foto.png
+--FormBoundary--
+
+### Criar com executavel renomeado para .pdf (415: o tipo vem do conteudo)
+POST {{api}}/public/requests
+Content-Type: multipart/form-data; boundary=FormBoundary
+
+--FormBoundary
+Content-Disposition: form-data; name="name"
+
+Teste Tipo Invalido
+--FormBoundary
+Content-Disposition: form-data; name="email"
+
+teste@exemplo.com
+--FormBoundary
+Content-Disposition: form-data; name="phone"
+
+11987654321
+--FormBoundary
+Content-Disposition: form-data; name="description"
+
+Arquivo com extensao de PDF e conteudo de executavel.
+--FormBoundary
+Content-Disposition: form-data; name="files"; filename="nota.pdf"
+Content-Type: application/pdf
+
+< ./samples/executavel-renomeado.pdf
+--FormBoundary--
+
+### Consultar status (token no header, nunca na URL)
+GET {{api}}/public/requests/{{id}}/status
+X-Consultation-Token: {{token}}
+
+### Consultar com token errado (404 igual ao de id inexistente)
+GET {{api}}/public/requests/{{id}}/status
+X-Consultation-Token: token-errado
+
+### Login do admin (200: accessToken, expiresIn)
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{ "email": "admin@escoramento.local", "password": "sua-senha" }
+
+### Listar (paginado, filtro opcional por status)
+GET {{api}}/admin/requests?page=1&limit=10&status=PENDING
+Authorization: Bearer {{accessToken}}
+
+### Detalhe com os arquivos (pegue o fileId daqui)
+GET {{api}}/admin/requests/{{id}}
+Authorization: Bearer {{accessToken}}
+
+### Editar dados (status e files no corpo dao 400)
+PATCH {{api}}/admin/requests/{{id}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "description": "Preciso de 50 escoras por 45 dias." }
+
+### Mudar status (PENDING -> UNDER_REVIEW -> APPROVED | CANCELLED)
+PATCH {{api}}/admin/requests/{{id}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "status": "UNDER_REVIEW" }
+
+### Adicionar arquivos (201; 409 se passar de 5)
+POST {{api}}/admin/requests/{{id}}/files
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=FormBoundary
+
+--FormBoundary
+Content-Disposition: form-data; name="files"; filename="foto.png"
+Content-Type: image/png
+
+< ./samples/foto.png
+--FormBoundary--
+
+### Substituir arquivo (campo `file`, mantem o fileId)
+PUT {{api}}/admin/requests/{{id}}/files/{{fileId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=FormBoundary
+
+--FormBoundary
+Content-Disposition: form-data; name="file"; filename="contrato.pdf"
+Content-Type: application/pdf
+
+< ./samples/contrato.pdf
+--FormBoundary--
+
+### URL assinada de download (5 minutos)
+GET {{api}}/admin/requests/{{id}}/files/{{fileId}}/url
+Authorization: Bearer {{accessToken}}
+
+### Remover arquivo (204)
+DELETE {{api}}/admin/requests/{{id}}/files/{{fileId}}
+Authorization: Bearer {{accessToken}}

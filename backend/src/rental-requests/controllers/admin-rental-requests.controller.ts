@@ -15,7 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminGuard } from '../../auth/admin.guard';
 import { ParseObjectIdPipe } from '../../common/parse-object-id.pipe';
 import { ChangeStatusDto } from '../dto/change-status.dto';
@@ -39,16 +39,19 @@ export class AdminRentalRequestsController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'Lista paginada, filtro opcional por status' })
   list(@Query() query: ListQueryDto) {
     return this.rentalRequests.list(query);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Detalhe com os metadados dos arquivos' })
   findOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.rentalRequests.findDetail(id);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Edita nome, e-mail, telefone e descricao' })
   update(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() dto: UpdateRentalRequestDto,
@@ -57,6 +60,7 @@ export class AdminRentalRequestsController {
   }
 
   @Patch(':id/status')
+  @ApiOperation({ summary: 'Muda o status (so transicoes validas)' })
   changeStatus(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() { status }: ChangeStatusDto,
@@ -65,6 +69,7 @@ export class AdminRentalRequestsController {
   }
 
   @Post(':id/files')
+  @ApiOperation({ summary: 'Adiciona arquivos (limite de 5 no total)' })
   @ApiFilesUpload()
   @UseInterceptors(FilesInterceptor('files', MAX_FILES_PER_REQUEST))
   addFiles(
@@ -75,6 +80,7 @@ export class AdminRentalRequestsController {
   }
 
   @Put(':id/files/:fileId')
+  @ApiOperation({ summary: 'Substitui um arquivo mantendo o fileId' })
   @ApiSingleFileUpload()
   @UseInterceptors(FileInterceptor('file'))
   replaceFile(
@@ -86,6 +92,7 @@ export class AdminRentalRequestsController {
   }
 
   @Delete(':id/files/:fileId')
+  @ApiOperation({ summary: 'Remove o arquivo do Mongo e do storage' })
   @HttpCode(204)
   removeFile(
     @Param('id', ParseObjectIdPipe) id: string,
@@ -95,6 +102,7 @@ export class AdminRentalRequestsController {
   }
 
   @Get(':id/files/:fileId/url')
+  @ApiOperation({ summary: 'URL assinada de download (5 min)' })
   signedUrl(
     @Param('id', ParseObjectIdPipe) id: string,
     @Param('fileId', ParseObjectIdPipe) fileId: string,

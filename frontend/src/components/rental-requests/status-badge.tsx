@@ -10,7 +10,7 @@ const badgeVariants = cva(
     variants: {
       status: {
         PENDING: "bg-warning-soft text-warning",
-        UNDER_REVIEW: "bg-brand-50 text-brand-700",
+        UNDER_REVIEW: "bg-info-soft text-info",
         APPROVED: "bg-success-soft text-success",
         CANCELLED: "bg-danger-soft text-danger",
       },

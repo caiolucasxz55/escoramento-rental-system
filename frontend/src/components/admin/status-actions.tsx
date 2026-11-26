@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { StatusBadge } from "@/components/rental-requests/status-badge";
+import { StatusProgress } from "@/components/rental-requests/status-progress";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { adminApi } from "@/lib/api";
@@ -51,8 +52,9 @@ export function StatusActions({ request, onChanged, onConflict }: StatusActionsP
         <CardTitle>Status</CardTitle>
         <StatusBadge status={request.status} />
       </div>
+      <StatusProgress status={request.status} className="mt-5" />
       {options.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
           {options.map((next) => (
             <Button
               key={next}
@@ -66,7 +68,9 @@ export function StatusActions({ request, onChanged, onConflict }: StatusActionsP
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-ink-muted">Status final: não há próximas etapas.</p>
+        <p className="mt-5 border-t border-line pt-4 text-sm text-ink-muted">
+          Status final: não há próximas etapas.
+        </p>
       )}
     </Card>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn } from "lucide-react";
+import { HardHat, LogIn } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,10 @@ export function LoginView() {
 
   return (
     <div className="grid min-h-screen place-items-center px-4">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm border-t-4 border-t-brand-500">
+        <span className="mb-4 flex size-11 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+          <HardHat className="size-6" aria-hidden />
+        </span>
         <h1 className="text-xl font-semibold text-ink">Área administrativa</h1>
         <p className="mt-1 text-sm text-ink-muted">Entre para gerenciar as solicitações.</p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

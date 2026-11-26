@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Mail, Phone } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { PageHeader } from "@/components/ui/page-header";
@@ -10,7 +10,7 @@ import { FullPageSpinner } from "@/components/ui/spinner";
 import { useApiResource } from "@/hooks/use-api-resource";
 import { adminApi } from "@/lib/api";
 import { errorMessage } from "@/lib/error-messages";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatPhone, phoneHref } from "@/lib/format";
 
 import { FilesPanel } from "./files-panel";
 import { RentalRequestDataForm } from "./rental-request-data-form";
@@ -44,7 +44,19 @@ export function RentalRequestDetailView() {
       <PageHeader
         className="mb-0"
         title={request.name}
-        subtitle={`Criada em ${formatDateTime(request.createdAt)} · atualizada em ${formatDateTime(request.updatedAt)}`}
+        subtitle={
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <a href={`mailto:${request.email}`} className="inline-flex items-center gap-1 hover:text-brand-600">
+              <Mail className="size-3.5" aria-hidden /> {request.email}
+            </a>
+            <a href={phoneHref(request.phone)} className="inline-flex items-center gap-1 hover:text-brand-600">
+              <Phone className="size-3.5" aria-hidden /> {formatPhone(request.phone)}
+            </a>
+            <span>
+              Criada em {formatDateTime(request.createdAt)} · atualizada em {formatDateTime(request.updatedAt)}
+            </span>
+          </span>
+        }
       />
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-6">

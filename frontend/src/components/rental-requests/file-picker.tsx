@@ -1,11 +1,12 @@
 "use client";
 
-import { useId, useRef } from "react";
-import { FileText, Paperclip, X } from "lucide-react";
+import { useId, useRef, useState, type DragEvent } from "react";
+import { FileText, UploadCloud, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ACCEPT_ATTRIBUTE, MAX_FILE_SIZE_MB, MAX_FILES, validateFiles } from "@/lib/file-rules";
 import { formatBytes } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 interface FilePickerProps {
   files: File[];
@@ -17,6 +18,7 @@ interface FilePickerProps {
 export function FilePicker({ files, onChange, onError, disabled }: FilePickerProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
 
   function handleSelect(selected: FileList | null) {
     const next = [...files, ...Array.from(selected ?? [])];
@@ -32,6 +34,14 @@ export function FilePicker({ files, onChange, onError, disabled }: FilePickerPro
     onChange(files.filter((_, i) => i !== index));
   }
 
+  const blocked = disabled || files.length >= MAX_FILES;
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setDragging(false);
+    if (!blocked) handleSelect(event.dataTransfer.files);
+  }
+
   return (
     <div>
       <input
@@ -40,21 +50,32 @@ export function FilePicker({ files, onChange, onError, disabled }: FilePickerPro
         type="file"
         multiple
         accept={ACCEPT_ATTRIBUTE}
-        className="sr-only"
-        disabled={disabled || files.length >= MAX_FILES}
+        className="peer sr-only"
+        disabled={blocked}
         onChange={(e) => handleSelect(e.target.files)}
       />
-      <Button
-        variant="outline"
-        disabled={disabled || files.length >= MAX_FILES}
-        onClick={() => inputRef.current?.click()}
+      <label
+        htmlFor={inputId}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (!blocked) setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        className={cn(
+          "flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-line px-4 py-6 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/50 peer-focus-visible:border-brand-500 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500/30",
+          dragging && "border-brand-500 bg-brand-50",
+          blocked && "cursor-not-allowed opacity-60 hover:border-line hover:bg-transparent",
+        )}
       >
-        <Paperclip aria-hidden /> Anexar arquivos
-      </Button>
-      <p className="mt-1.5 text-xs text-ink-muted">
-        PDF, PNG ou JPEG · até {MAX_FILES} arquivos de {MAX_FILE_SIZE_MB} MB · {files.length}/
-        {MAX_FILES}
-      </p>
+        <UploadCloud className="size-7 text-brand-600" aria-hidden />
+        <span className="text-sm font-medium text-ink">
+          {files.length >= MAX_FILES ? "Limite de arquivos atingido" : "Arraste os arquivos ou clique para escolher"}
+        </span>
+        <span className="text-xs text-ink-muted">
+          PDF, PNG ou JPEG · até {MAX_FILE_SIZE_MB} MB cada · {files.length}/{MAX_FILES}
+        </span>
+      </label>
 
       {files.length > 0 && (
         <ul className="mt-3 divide-y divide-line rounded-lg border border-line">

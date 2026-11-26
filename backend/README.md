@@ -8,3 +8,5 @@ npm test            # unitários
 npm run test:e2e    # integração
 npm run seed        # dados fictícios
 ```
+
+Exemplos de todos os endpoints em [`requests.http`](requests.http) (arquivos de upload em `samples/`).

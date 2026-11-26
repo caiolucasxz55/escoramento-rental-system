@@ -1,7 +1,7 @@
 "use client";
 
-import { Select } from "@/components/ui/select";
-import { STATUS_LABEL, STATUS_OPTIONS, isStatus } from "@/lib/rental-request-status";
+import { STATUS_LABEL, STATUS_OPTIONS } from "@/lib/rental-request-status";
+import { cn } from "@/lib/utils";
 import type { RentalRequestStatus } from "@/types";
 
 interface StatusFilterProps {
@@ -9,22 +9,33 @@ interface StatusFilterProps {
   onChange: (status?: RentalRequestStatus) => void;
 }
 
+const OPTIONS: { value?: RentalRequestStatus; label: string }[] = [
+  { label: "Todas" },
+  ...STATUS_OPTIONS.map((value) => ({ value, label: STATUS_LABEL[value] })),
+];
+
 export function StatusFilter({ value, onChange }: StatusFilterProps) {
   return (
-    <label className="flex items-center gap-2 text-sm text-ink-muted">
-      Status
-      <Select
-        className="w-44"
-        value={value ?? ""}
-        onChange={(e) => onChange(isStatus(e.target.value) ? e.target.value : undefined)}
-      >
-        <option value="">Todos</option>
-        {STATUS_OPTIONS.map((status) => (
-          <option key={status} value={status}>
-            {STATUS_LABEL[status]}
-          </option>
-        ))}
-      </Select>
-    </label>
+    <div role="group" aria-label="Filtrar por status" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+      {OPTIONS.map((option) => {
+        const active = option.value === value;
+        return (
+          <button
+            key={option.label}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
+              active
+                ? "border-brand-600 bg-brand-600 text-white"
+                : "border-line bg-surface text-ink-muted hover:border-brand-500 hover:text-brand-600",
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import type { CreatedRentalRequest } from "@/types";
 
 import { ConfirmationCard } from "./confirmation-card";
+import { HowItWorks } from "./how-it-works";
 import { RentalRequestForm } from "./rental-request-form";
 
 export function NewRentalRequestView() {
@@ -20,7 +21,10 @@ export function NewRentalRequestView() {
       {created ? (
         <ConfirmationCard created={created} onNewRequest={() => setCreated(null)} />
       ) : (
-        <RentalRequestForm onCreated={setCreated} />
+        <>
+          <HowItWorks />
+          <RentalRequestForm onCreated={setCreated} />
+        </>
       )}
     </>
   );

@@ -1,6 +1,35 @@
 import { describe, expect, it } from "vitest";
 
-import { isFinal, isStatus, nextStatuses } from "./rental-request-status";
+import { isFinal, isStatus, nextStatuses, progressSteps } from "./rental-request-status";
+
+describe("progressSteps", () => {
+  const states = (status: Parameters<typeof progressSteps>[0]) =>
+    progressSteps(status).map((s) => `${s.status}:${s.state}`);
+
+  it("PENDING: primeira etapa atual", () => {
+    expect(states("PENDING")).toEqual([
+      "PENDING:current",
+      "UNDER_REVIEW:upcoming",
+      "APPROVED:upcoming",
+    ]);
+  });
+
+  it("UNDER_REVIEW: segunda etapa atual", () => {
+    expect(states("UNDER_REVIEW")).toEqual([
+      "PENDING:done",
+      "UNDER_REVIEW:current",
+      "APPROVED:upcoming",
+    ]);
+  });
+
+  it("APPROVED: tudo concluido", () => {
+    expect(states("APPROVED")).toEqual(["PENDING:done", "UNDER_REVIEW:done", "APPROVED:done"]);
+  });
+
+  it("CANCELLED: trilha curta, sem afirmar que passou por analise", () => {
+    expect(states("CANCELLED")).toEqual(["PENDING:done", "CANCELLED:done"]);
+  });
+});
 
 describe("nextStatuses", () => {
   it.each([

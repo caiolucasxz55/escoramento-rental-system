@@ -94,7 +94,7 @@ A API não sobe se faltar uma variável obrigatória: o erro diz qual.
 
 ## Endpoints
 
-Documentação interativa em **`/api/docs`** (Swagger) e exemplos prontos em [`requests.http`](requests.http), com arquivos de exemplo em `samples/`.
+Documentação interativa em **`/api/docs`** (Swagger) e exemplos prontos em [`backend/requests.http`](backend/requests.http), com arquivos de exemplo em `backend/samples/`.
 
 | Método | Rota | Acesso | Sucesso |
 | --- | --- | --- | --- |

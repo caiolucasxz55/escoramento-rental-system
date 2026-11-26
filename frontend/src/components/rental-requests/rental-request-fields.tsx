@@ -3,7 +3,10 @@
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { maskPhoneInput } from "@/lib/format";
 import type { RentalRequestInput } from "@/types";
+
+const DESCRIPTION_MAX = 2000;
 
 interface RentalRequestFieldsProps {
   values: RentalRequestInput;
@@ -44,11 +47,13 @@ export function RentalRequestFields({ values, onChange, disabled, idPrefix }: Re
         />
       </Field>
       <Field label="Telefone" htmlFor={id("phone")} hint="Com DDD. Ex.: (11) 98765-4321" required>
+        {/* estado guarda so digitos; a mascara e so visual */}
         <Input
           id={id("phone")}
           type="tel"
-          value={values.phone}
-          onChange={(e) => set("phone")(e.target.value)}
+          inputMode="numeric"
+          value={maskPhoneInput(values.phone)}
+          onChange={(e) => set("phone")(e.target.value.replace(/\D/g, "").slice(0, 13))}
           required
           disabled={disabled}
           autoComplete="tel"
@@ -57,7 +62,7 @@ export function RentalRequestFields({ values, onChange, disabled, idPrefix }: Re
       <Field
         label="Descrição do pedido"
         htmlFor={id("description")}
-        hint="Itens, quantidades, prazo e endereço da obra."
+        hint={`Itens, quantidades, prazo e endereço da obra · ${values.description.length}/${DESCRIPTION_MAX}`}
         required
         className="sm:col-span-2"
       >
@@ -66,7 +71,7 @@ export function RentalRequestFields({ values, onChange, disabled, idPrefix }: Re
           value={values.description}
           onChange={(e) => set("description")(e.target.value)}
           minLength={10}
-          maxLength={2000}
+          maxLength={DESCRIPTION_MAX}
           required
           disabled={disabled}
         />

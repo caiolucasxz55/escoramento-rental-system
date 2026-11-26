@@ -3,14 +3,14 @@ import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { AppException } from '../common/app-exception';
-import { EnvironmentVariables } from '../config/env.validation';
-import { STORAGE, type Storage } from '../storage/storage.interface';
-import { MAX_FILES_PER_REQUEST } from './file-validation';
-import type { ValidatedUpload } from './parse-uploads.pipe';
-import { DetailView, toDetail } from './rental-request.mappers';
-import { FileMeta, RentalRequest } from './schemas/rental-request.schema';
-import { EDITABLE_STATUSES, isFinal } from './status-transitions';
+import { AppException } from '../../common/app-exception';
+import { EnvironmentVariables } from '../../config/env.validation';
+import { STORAGE, type Storage } from '../../storage/storage.interface';
+import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
+import type { ValidatedUpload } from '../pipes/parse-uploads.pipe';
+import { DetailView, toDetail } from '../mappers/rental-request.mappers';
+import { FileMeta, RentalRequest } from '../schemas/rental-request.schema';
+import { EDITABLE_STATUSES, isFinal } from '../rules/status-transitions';
 
 export interface SignedUrl {
   url: string;

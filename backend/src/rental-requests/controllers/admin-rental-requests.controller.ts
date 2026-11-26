@@ -16,15 +16,15 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { AdminGuard } from '../auth/admin.guard';
-import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
-import { ChangeStatusDto } from './dto/change-status.dto';
-import { ListQueryDto } from './dto/list-query.dto';
-import { UpdateRentalRequestDto } from './dto/update-rental-request.dto';
-import { MAX_FILES_PER_REQUEST } from './file-validation';
-import { ParseUploadsPipe, ValidatedUpload } from './parse-uploads.pipe';
-import { RentalRequestFilesService } from './rental-request-files.service';
-import { RentalRequestsService } from './rental-requests.service';
+import { AdminGuard } from '../../auth/admin.guard';
+import { ParseObjectIdPipe } from '../../common/parse-object-id.pipe';
+import { ChangeStatusDto } from '../dto/change-status.dto';
+import { ListQueryDto } from '../dto/list-query.dto';
+import { UpdateRentalRequestDto } from '../dto/update-rental-request.dto';
+import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
+import { ParseUploadsPipe, ValidatedUpload } from '../pipes/parse-uploads.pipe';
+import { RentalRequestFilesService } from '../services/rental-request-files.service';
+import { RentalRequestsService } from '../services/rental-requests.service';
 import { ApiFilesUpload, ApiSingleFileUpload } from './upload-docs';
 
 // guard no controller inteiro: nenhuma rota admin fica sem

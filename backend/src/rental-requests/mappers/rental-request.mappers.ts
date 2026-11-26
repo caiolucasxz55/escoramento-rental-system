@@ -1,5 +1,5 @@
-import type { FileMeta, RentalRequest } from './schemas/rental-request.schema';
-import type { RentalRequestStatus } from './status-transitions';
+import type { FileMeta, RentalRequest } from '../schemas/rental-request.schema';
+import type { RentalRequestStatus } from '../rules/status-transitions';
 
 type RentalRequestData = Pick<
   RentalRequest,

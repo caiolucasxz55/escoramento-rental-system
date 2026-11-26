@@ -1,14 +1,14 @@
 import { HttpStatus, Injectable, PipeTransform } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AppException } from '../common/app-exception';
-import { EnvironmentVariables } from '../config/env.validation';
+import { AppException } from '../../common/app-exception';
+import { EnvironmentVariables } from '../../config/env.validation';
 import {
   checkFile,
   DetectedFileType,
   FileCheck,
   megabytesToBytes,
   sanitizeFilename,
-} from './file-validation';
+} from '../rules/file-validation';
 
 export interface ValidatedUpload {
   buffer: Buffer;

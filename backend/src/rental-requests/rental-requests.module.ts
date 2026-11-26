@@ -5,11 +5,14 @@ import { MulterModule } from '@nestjs/platform-express';
 import { AuthModule } from '../auth/auth.module';
 import { EnvironmentVariables } from '../config/env.validation';
 import { StorageModule } from '../storage/storage.module';
-import { AdminRentalRequestsController } from './admin-rental-requests.controller';
-import { MAX_FILES_PER_REQUEST, megabytesToBytes } from './file-validation';
-import { PublicRentalRequestsController } from './public-rental-requests.controller';
-import { RentalRequestFilesService } from './rental-request-files.service';
-import { RentalRequestsService } from './rental-requests.service';
+import { AdminRentalRequestsController } from './controllers/admin-rental-requests.controller';
+import {
+  MAX_FILES_PER_REQUEST,
+  megabytesToBytes,
+} from './rules/file-validation';
+import { PublicRentalRequestsController } from './controllers/public-rental-requests.controller';
+import { RentalRequestFilesService } from './services/rental-request-files.service';
+import { RentalRequestsService } from './services/rental-requests.service';
 import {
   RentalRequest,
   RentalRequestSchema,

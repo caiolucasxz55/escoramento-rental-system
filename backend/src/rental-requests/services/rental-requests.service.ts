@@ -1,16 +1,16 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { AppException } from '../common/app-exception';
+import { AppException } from '../../common/app-exception';
 import {
   consultationTokenMatches,
   generateConsultationToken,
   hashConsultationToken,
-} from '../common/consultation-token';
-import { CreateRentalRequestDto } from './dto/create-rental-request.dto';
-import { ListQueryDto } from './dto/list-query.dto';
-import { UpdateRentalRequestDto } from './dto/update-rental-request.dto';
-import type { ValidatedUpload } from './parse-uploads.pipe';
+} from '../../common/consultation-token';
+import { CreateRentalRequestDto } from '../dto/create-rental-request.dto';
+import { ListQueryDto } from '../dto/list-query.dto';
+import { UpdateRentalRequestDto } from '../dto/update-rental-request.dto';
+import type { ValidatedUpload } from '../pipes/parse-uploads.pipe';
 import { RentalRequestFilesService } from './rental-request-files.service';
 import {
   DetailView,
@@ -20,13 +20,13 @@ import {
   toDetail,
   toListItem,
   toPublicStatus,
-} from './rental-request.mappers';
-import { RentalRequest } from './schemas/rental-request.schema';
+} from '../mappers/rental-request.mappers';
+import { RentalRequest } from '../schemas/rental-request.schema';
 import {
   canTransition,
   EDITABLE_STATUSES,
   RentalRequestStatus,
-} from './status-transitions';
+} from '../rules/status-transitions';
 
 export interface CreatedRentalRequest {
   id: string;

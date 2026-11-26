@@ -1,12 +1,12 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Model, Types } from 'mongoose';
-import { InMemoryStorage } from '../storage/in-memory.storage';
-import type { ValidatedUpload } from './parse-uploads.pipe';
+import { InMemoryStorage } from '../../storage/in-memory.storage';
+import type { ValidatedUpload } from '../pipes/parse-uploads.pipe';
 import { RentalRequestFilesService } from './rental-request-files.service';
 import { RentalRequestsService } from './rental-requests.service';
-import type { RentalRequest } from './schemas/rental-request.schema';
-import { RentalRequestStatus } from './status-transitions';
+import type { RentalRequest } from '../schemas/rental-request.schema';
+import { RentalRequestStatus } from '../rules/status-transitions';
 
 const query = <T>(value: T | Error) => ({
   lean: () =>

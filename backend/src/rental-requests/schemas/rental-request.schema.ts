@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { MAX_FILES_PER_REQUEST } from '../file-validation';
-import { RentalRequestStatus } from '../status-transitions';
+import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
+import { RentalRequestStatus } from '../rules/status-transitions';
 
 export const PHONE_PATTERN = /^\d{10,13}$/;
 

@@ -1,5 +1,5 @@
 import { model, Types } from 'mongoose';
-import { RentalRequestStatus } from '../status-transitions';
+import { RentalRequestStatus } from '../rules/status-transitions';
 import { RentalRequest, RentalRequestSchema } from './rental-request.schema';
 
 // modelo sem conexao: validateSync e toJSON nao tocam o banco
@@ -62,7 +62,7 @@ describe('RentalRequestSchema', () => {
     const json = new RentalRequestModel({
       ...base,
       files: [file(1)],
-    }).toJSON() as Record<string, unknown> & {
+    }).toJSON() as unknown as Record<string, unknown> & {
       files: Record<string, unknown>[];
     };
 

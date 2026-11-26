@@ -12,11 +12,11 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
-import { ParseObjectIdPipe } from '../common/parse-object-id.pipe';
-import { CreateRentalRequestDto } from './dto/create-rental-request.dto';
-import { MAX_FILES_PER_REQUEST } from './file-validation';
-import { ParseUploadsPipe, ValidatedUpload } from './parse-uploads.pipe';
-import { RentalRequestsService } from './rental-requests.service';
+import { ParseObjectIdPipe } from '../../common/parse-object-id.pipe';
+import { CreateRentalRequestDto } from '../dto/create-rental-request.dto';
+import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
+import { ParseUploadsPipe, ValidatedUpload } from '../pipes/parse-uploads.pipe';
+import { RentalRequestsService } from '../services/rental-requests.service';
 import { ApiCreateWithFiles } from './upload-docs';
 
 export const CONSULTATION_TOKEN_HEADER = 'x-consultation-token';

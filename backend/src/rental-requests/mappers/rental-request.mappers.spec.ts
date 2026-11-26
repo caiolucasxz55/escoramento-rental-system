@@ -1,10 +1,6 @@
 import { Types } from 'mongoose';
-import {
-  toDetail,
-  toListItem,
-  toPublicStatus,
-} from './rental-request.mappers';
-import { RentalRequestStatus } from './status-transitions';
+import { toDetail, toListItem, toPublicStatus } from './rental-request.mappers';
+import { RentalRequestStatus } from '../rules/status-transitions';
 
 const now = new Date('2026-11-25T18:00:00.000Z');
 const fileId = new Types.ObjectId();

@@ -9,8 +9,8 @@ import { AllExceptionsFilter, ErrorBody } from './all-exceptions.filter';
 import { AppException } from './app-exception';
 
 function run(exception: unknown) {
-  const json = jest.fn();
-  const status = jest.fn(() => ({ json }));
+  const json = jest.fn<void, [ErrorBody]>();
+  const status = jest.fn((_code: number) => ({ json }));
   const host = {
     switchToHttp: () => ({
       getRequest: () => ({ method: 'GET', path: '/api/x' }),
@@ -20,8 +20,8 @@ function run(exception: unknown) {
 
   new AllExceptionsFilter().catch(exception, host);
   return {
-    status: status.mock.calls[0][0] as number,
-    body: json.mock.calls[0][0] as ErrorBody,
+    status: status.mock.calls[0][0],
+    body: json.mock.calls[0][0],
   };
 }
 

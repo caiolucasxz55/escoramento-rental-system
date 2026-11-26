@@ -12,7 +12,7 @@ export class ParseObjectIdPipe implements PipeTransform<string, string> {
       throw new AppException(
         'INVALID_ID',
         HttpStatus.BAD_REQUEST,
-        'Identificador invalido',
+        'Identificador inválido.',
       );
     }
     return value;

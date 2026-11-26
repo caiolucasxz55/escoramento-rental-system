@@ -13,7 +13,7 @@ const unauthorized = () =>
   new AppException(
     'UNAUTHORIZED',
     HttpStatus.UNAUTHORIZED,
-    'Token ausente, invalido ou expirado',
+    'Token ausente, inválido ou expirado.',
   );
 
 @Injectable()

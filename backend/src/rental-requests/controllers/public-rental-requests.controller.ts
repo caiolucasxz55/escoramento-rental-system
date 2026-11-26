@@ -28,7 +28,7 @@ export class PublicRentalRequestsController {
 
   @Post()
   @ApiOperation({
-    summary: 'Cria a solicitacao (ate 5 arquivos); token aparece so aqui',
+    summary: 'Cria a solicitação (até 5 arquivos); token aparece só aqui',
   })
   @ApiCreateWithFiles()
   @UseInterceptors(FilesInterceptor('files', MAX_FILES_PER_REQUEST))

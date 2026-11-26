@@ -4,6 +4,8 @@ import {
   HttpStatus,
   Logger,
   NotFoundException,
+  PayloadTooLargeException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { AllExceptionsFilter, ErrorBody } from './all-exceptions.filter';
 import { AppException } from './app-exception';
@@ -75,6 +77,38 @@ describe('AllExceptionsFilter', () => {
     });
     expect(raw).not.toContain('hunter2');
     expect(raw).not.toContain('at ');
+  });
+
+  it.each([
+    [new PayloadTooLargeException('File too large'), 413, 'FILE_TOO_LARGE'],
+    [new BadRequestException('Too many files'), 400, 'TOO_MANY_FILES'],
+    [
+      new BadRequestException('Unexpected file field - outro'),
+      400,
+      'UNEXPECTED_FILE_FIELD',
+    ],
+  ])(
+    'erro do Multer vira code proprio e mensagem em portugues',
+    (exception, code, error) => {
+      const { status, body } = run(exception);
+
+      expect(status).toBe(code);
+      expect(body.error).toBe(error);
+      expect(body.message).not.toBe(exception.message);
+    },
+  );
+
+  it('503 intencional (health) mantem o status, sem o corpo original', () => {
+    const { status, body } = run(
+      new ServiceUnavailableException({ status: 'error', mongo: 'down' }),
+    );
+
+    expect(status).toBe(503);
+    expect(body).toMatchObject({
+      statusCode: 503,
+      error: 'SERVICE_UNAVAILABLE',
+    });
+    expect(JSON.stringify(body)).not.toContain('mongo');
   });
 
   it('erro inesperado e logado com stack', () => {

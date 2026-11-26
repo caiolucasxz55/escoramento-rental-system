@@ -52,7 +52,7 @@ export class AdminRentalRequestsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Edita nome, e-mail, telefone e descricao' })
+  @ApiOperation({ summary: 'Edita nome, e-mail, telefone e descrição' })
   update(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() dto: UpdateRentalRequestDto,
@@ -61,7 +61,7 @@ export class AdminRentalRequestsController {
   }
 
   @Patch(':id/status')
-  @ApiOperation({ summary: 'Muda o status (so transicoes validas)' })
+  @ApiOperation({ summary: 'Muda o status (só transições válidas)' })
   changeStatus(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() { status }: ChangeStatusDto,

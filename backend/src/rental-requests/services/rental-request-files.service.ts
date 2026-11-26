@@ -74,7 +74,7 @@ export class RentalRequestFilesService {
   }
 
   async add(id: string, uploads: ValidatedUpload[]): Promise<DetailView> {
-    if (uploads.length === 0) throw noFiles('Envie ao menos um arquivo');
+    if (uploads.length === 0) throw noFiles('Envie ao menos um arquivo.');
 
     const metas = await this.uploadAll(new Types.ObjectId(id), uploads);
     // files.{5-n} inexistente = ainda cabem n; checado na propria escrita
@@ -101,7 +101,7 @@ export class RentalRequestFilesService {
           new AppException(
             'FILE_LIMIT_REACHED',
             HttpStatus.CONFLICT,
-            `Limite de ${MAX_FILES_PER_REQUEST} arquivos por solicitacao`,
+            `Limite de ${MAX_FILES_PER_REQUEST} arquivos por solicitação.`,
           ),
       );
     }
@@ -128,7 +128,7 @@ export class RentalRequestFilesService {
     fileId: string,
     upload: ValidatedUpload | undefined,
   ): Promise<DetailView> {
-    if (!upload) throw noFiles('Envie o arquivo substituto');
+    if (!upload) throw noFiles('Envie o arquivo substituto.');
 
     const [meta] = await this.uploadAll(new Types.ObjectId(id), [upload]);
     meta._id = new Types.ObjectId(fileId); // fileId continua o mesmo
@@ -224,7 +224,7 @@ export class RentalRequestFilesService {
       new AppException(
         'CONCURRENT_UPDATE',
         HttpStatus.CONFLICT,
-        'Solicitacao alterada por outra operacao',
+        'Solicitação alterada por outra operação.',
       ),
   ): Promise<AppException> {
     const doc = await this.model
@@ -234,21 +234,21 @@ export class RentalRequestFilesService {
       return new AppException(
         'REQUEST_NOT_FOUND',
         HttpStatus.NOT_FOUND,
-        'Solicitacao nao encontrada',
+        'Solicitação não encontrada.',
       );
     }
     if (fileId && !doc.files.some((f) => String(f._id) === fileId)) {
       return new AppException(
         'FILE_NOT_FOUND',
         HttpStatus.NOT_FOUND,
-        'Arquivo nao encontrado nesta solicitacao',
+        'Arquivo não encontrado nesta solicitação.',
       );
     }
     if (isFinal(doc.status)) {
       return new AppException(
         'REQUEST_NOT_EDITABLE',
         HttpStatus.CONFLICT,
-        'Solicitacao aprovada ou cancelada nao pode ser alterada',
+        'Solicitação aprovada ou cancelada não pode ser alterada.',
       );
     }
     return otherwise();

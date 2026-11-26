@@ -43,7 +43,7 @@ const notFound = () =>
   new AppException(
     'REQUEST_NOT_FOUND',
     HttpStatus.NOT_FOUND,
-    'Solicitacao nao encontrada',
+    'Solicitação não encontrada.',
   );
 
 @Injectable()
@@ -129,6 +129,14 @@ export class RentalRequestsService {
   }
 
   async update(id: string, dto: UpdateRentalRequestDto): Promise<DetailView> {
+    // sem isso o $set vazio so mexeria no updatedAt
+    if (Object.keys(dto).length === 0) {
+      throw new AppException(
+        'NOTHING_TO_UPDATE',
+        HttpStatus.BAD_REQUEST,
+        'Envie ao menos um campo para alterar.',
+      );
+    }
     const updated = await this.model
       .findOneAndUpdate(
         { _id: id, status: { $in: EDITABLE_STATUSES } },
@@ -142,7 +150,7 @@ export class RentalRequestsService {
     throw new AppException(
       'REQUEST_NOT_EDITABLE',
       HttpStatus.CONFLICT,
-      'Solicitacao aprovada ou cancelada nao pode ser alterada',
+      'Solicitação aprovada ou cancelada não pode ser alterada.',
     );
   }
 
@@ -157,7 +165,7 @@ export class RentalRequestsService {
       throw new AppException(
         'INVALID_STATUS_TRANSITION',
         HttpStatus.CONFLICT,
-        `Nao e possivel mudar de ${current.status} para ${next}`,
+        `Não é possível mudar de ${current.status} para ${next}.`,
       );
     }
 
@@ -173,7 +181,7 @@ export class RentalRequestsService {
       throw new AppException(
         'STATUS_CONFLICT',
         HttpStatus.CONFLICT,
-        'Status alterado por outra operacao',
+        'Status alterado por outra operação.',
       );
     }
     return toDetail(updated);

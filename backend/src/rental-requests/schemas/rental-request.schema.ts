@@ -60,7 +60,7 @@ export class RentalRequest {
     default: [],
     validate: {
       validator: (files: unknown[]) => files.length <= MAX_FILES_PER_REQUEST,
-      message: `No maximo ${MAX_FILES_PER_REQUEST} arquivos`,
+      message: `No máximo ${MAX_FILES_PER_REQUEST} arquivos.`,
     },
   })
   files: FileMeta[];

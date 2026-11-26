@@ -11,7 +11,7 @@ function setupSwagger(app: INestApplication): void {
   const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
-      .setTitle('Escoramento - Solicitacoes de locacao')
+      .setTitle('Escoramento - Solicitações de locação')
       .setVersion('1.0')
       .addBearerAuth()
       .addApiKey(

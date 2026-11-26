@@ -33,7 +33,7 @@ export class AuthService {
       throw new AppException(
         'INVALID_CREDENTIALS',
         HttpStatus.UNAUTHORIZED,
-        'E-mail ou senha invalidos',
+        'E-mail ou senha inválidos.',
       );
     }
 

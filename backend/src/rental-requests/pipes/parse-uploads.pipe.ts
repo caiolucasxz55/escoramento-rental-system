@@ -27,8 +27,8 @@ const STATUS_BY_REASON: Record<Rejection, HttpStatus> = {
 
 const MESSAGE_BY_REASON: Record<Rejection, string> = {
   EMPTY_FILE: 'Arquivo vazio',
-  FILE_TOO_LARGE: 'Arquivo acima do tamanho maximo',
-  UNSUPPORTED_FILE_TYPE: 'Tipo de arquivo nao aceito (PDF, PNG ou JPEG)',
+  FILE_TOO_LARGE: 'Arquivo acima do tamanho máximo',
+  UNSUPPORTED_FILE_TYPE: 'Tipo de arquivo não aceito (PDF, PNG ou JPEG)',
 };
 
 // o tipo vem do conteudo; nome e mimetype do navegador sao ignorados

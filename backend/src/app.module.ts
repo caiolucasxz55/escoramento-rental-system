@@ -21,7 +21,7 @@ import { RentalRequestsModule } from './rental-requests/rental-requests.module';
     // so vale onde o ThrottlerGuard e aplicado (login e consulta publica)
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60_000, limit: 10 }],
-      errorMessage: 'Muitas requisicoes; tente novamente em instantes',
+      errorMessage: 'Muitas requisições; tente novamente em instantes.',
     }),
     AuthModule,
     RentalRequestsModule,

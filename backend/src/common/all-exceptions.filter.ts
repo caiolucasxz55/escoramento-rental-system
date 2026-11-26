@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AppException } from './app-exception';
+import { multerError } from './multer-errors';
 
 const DEFAULT_CODES: Record<number, string> = {
   400: 'BAD_REQUEST',
@@ -18,6 +19,7 @@ const DEFAULT_CODES: Record<number, string> = {
   413: 'PAYLOAD_TOO_LARGE',
   415: 'UNSUPPORTED_MEDIA_TYPE',
   429: 'TOO_MANY_REQUESTS',
+  503: 'SERVICE_UNAVAILABLE',
 };
 
 export interface ErrorBody {
@@ -79,11 +81,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
           : typeof raw === 'string'
             ? raw
             : exception.message;
+        const known = multerError(message);
+        if (known) return { statusCode, ...known };
         const error =
           statusCode === 400 && Array.isArray(raw)
             ? 'VALIDATION_ERROR'
             : (DEFAULT_CODES[statusCode] ?? 'ERROR');
         return { statusCode, error, message };
+      }
+      // 5xx intencional (ex.: 503 do health) mantem o status, sem detalhe
+      if (statusCode !== 500) {
+        return {
+          statusCode,
+          error: DEFAULT_CODES[statusCode] ?? 'ERROR',
+          message: 'Serviço indisponível no momento',
+        };
       }
     }
 

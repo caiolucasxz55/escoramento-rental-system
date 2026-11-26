@@ -80,7 +80,14 @@ describe('Area publica (e2e)', () => {
       const docs = await t.model.countDocuments();
       const objects = t.storage.objects.size;
 
-      await create(Array.from({ length: 6 }, () => pdf())).expect(400);
+      const res = await create(Array.from({ length: 6 }, () => pdf())).expect(
+        400,
+      );
+
+      expect(res.body).toMatchObject({
+        error: 'TOO_MANY_FILES',
+        message: 'Envie no máximo 5 arquivos.',
+      });
 
       expect(await t.model.countDocuments()).toBe(docs);
       expect(t.storage.objects.size).toBe(objects);
@@ -112,7 +119,11 @@ describe('Area publica (e2e)', () => {
     it('arquivo acima do limite (1 MB no teste): 413', async () => {
       const big = Buffer.concat([PDF, Buffer.alloc(1024 * 1024)]);
 
-      await create([{ buffer: big, name: 'grande.pdf' }]).expect(413);
+      const res = await create([{ buffer: big, name: 'grande.pdf' }]).expect(
+        413,
+      );
+
+      expect(res.body).toMatchObject({ error: 'FILE_TOO_LARGE' });
     });
   });
 

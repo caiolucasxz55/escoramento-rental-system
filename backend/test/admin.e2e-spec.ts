@@ -180,6 +180,16 @@ describe('Area admin (e2e)', () => {
       expect((await t.model.findById(id).lean())?.status).toBe(PENDING);
     });
 
+    it('PATCH vazio: 400 e updatedAt intacto', async () => {
+      const id = await seed();
+      const before = (await t.model.findById(id).lean())!.updatedAt;
+
+      const res = await patch(id, {}).expect(400);
+
+      expect(res.body).toMatchObject({ error: 'NOTHING_TO_UPDATE' });
+      expect((await t.model.findById(id).lean())!.updatedAt).toEqual(before);
+    });
+
     it('PATCH valido: 200 e updatedAt avanca', async () => {
       const id = await seed();
       const before = (await t.model.findById(id).lean())!.updatedAt;

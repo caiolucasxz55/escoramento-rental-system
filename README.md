@@ -1,6 +1,6 @@
 # Escoramento · Solicitações de locação
 
-Módulo full stack para clientes solicitarem a locação de escoramento (com até 5 documentos) e acompanharem o status, e para o admin analisar, editar, mudar status e gerenciar os documentos. O foco está nas regras de negócio no backend, no acesso seguro aos documentos e nos testes.
+Módulo full stack para clientes solicitarem a locação de escoramento (com até 5 documentos) e acompanharem o status, e para o admin analisar, editar e mudar o status, vendo os documentos num preview seguro. O foco está nas regras de negócio no backend, no acesso seguro aos documentos e nos testes.
 
 **Stack:** NestJS 12 + TypeScript · MongoDB (Mongoose) · S3 (AWS SDK v3; MinIO no ambiente local) · Next.js 16 (App Router) + Tailwind · pdf.js · Jest, Supertest e mongodb-memory-server · Vitest · Swagger.
 
@@ -101,6 +101,8 @@ O preview de PDF baixa o arquivo pelo navegador (pdf.js), então o bucket precis
 [{ "AllowedOrigins": ["https://seu-frontend"], "AllowedMethods": ["GET"], "AllowedHeaders": ["Range"], "ExposeHeaders": ["Content-Range", "Accept-Ranges"] }]
 ```
 
+Validado contra um bucket real na AWS (`us-east-2`): upload, download pela URL assinada (200), o mesmo objeto sem assinatura (403), `disposition=inline` com o CORS do preview e remoção (a URL antiga passa a dar 404). Com um bucket real, vale definir `STORAGE_QUOTA_MB` para os testes manuais não acumularem arquivos sem limite.
+
 ## Endpoints
 
 Documentação interativa em **`/api/docs`** (Swagger) e exemplos prontos em [`backend/requests.http`](backend/requests.http), com arquivos de exemplo em `backend/samples/`.
@@ -126,11 +128,26 @@ Todo erro sai no mesmo formato, com um código estável em `error`:
 { "statusCode": 409, "error": "INVALID_STATUS_TRANSITION", "message": "...", "path": "/api/admin/requests/.../status", "timestamp": "..." }
 ```
 
+O `message` vem em português, pronto para o usuário; o frontend escolhe o texto pelo `error`. Os códigos de negócio das solicitações ficam todos em `backend/src/rental-requests/errors.ts`.
+
+| Status | Códigos |
+| --- | --- |
+| 400 | `VALIDATION_ERROR`, `INVALID_ID`, `NOTHING_TO_UPDATE`, `NO_FILES`, `EMPTY_FILE`, `TOO_MANY_FILES`, `UNEXPECTED_FILE_FIELD` |
+| 401 | `UNAUTHORIZED`, `INVALID_CREDENTIALS` |
+| 404 | `REQUEST_NOT_FOUND` (também para token errado), `FILE_NOT_FOUND` |
+| 409 | `INVALID_STATUS_TRANSITION`, `STATUS_CONFLICT`, `REQUEST_NOT_EDITABLE`, `FILE_LIMIT_REACHED`, `CONCURRENT_UPDATE` |
+| 413 | `FILE_TOO_LARGE` |
+| 415 | `UNSUPPORTED_FILE_TYPE` |
+| 429 | `TOO_MANY_REQUESTS` |
+| 500 / 503 | `INTERNAL_ERROR` (sem detalhe), `SERVICE_UNAVAILABLE` (health com o Mongo fora) |
+| 507 | `STORAGE_QUOTA_EXCEEDED` |
+
 ## Decisões técnicas
 
 **Arquitetura.** Monorepo com `backend/` (NestJS) e `frontend/` (Next.js). Só o backend fala com o MongoDB e com o S3; o navegador só toca o storage por URL assinada, depois que a API autorizou. No backend, a feature `rental-requests/` é separada por papel (`controllers/`, `services/`, `pipes/`, `mappers/`, `rules/`, `dto/`, `schemas/`):
 
-- **Regras como funções puras** (`rules/status-transitions.ts`, `rules/file-validation.ts`), testadas sem subir o Nest.
+- **Regras como funções puras** em `rules/` (transições de status, validação de arquivo, token de consulta, limites dos campos), testadas sem subir o Nest. O DTO e o schema usam os mesmos limites, sem números repetidos.
+- **Erros de negócio num arquivo só** (`errors.ts`): cada erro com código estável e mensagem em português; os services só chamam essas funções.
 - **Dois controllers para o mesmo recurso**: `/public/requests` (sem JWT) e `/admin/requests` (guard no controller inteiro), para nenhuma rota admin ficar sem proteção por esquecimento.
 - **Storage atrás de uma interface** com token `STORAGE`: `S3Storage` em produção, `InMemoryStorage` nos testes. É a única abstração do projeto, porque é o único ponto que de fato se troca.
 - **Sem camada de repositório**: a correção depende de queries condicionais atômicas, e um repositório genérico esconderia justamente isso.
@@ -140,17 +157,17 @@ Todo erro sai no mesmo formato, com um código estável em `error`:
 
 **Regras de status com concorrência.** O mapa de transições define os próximos estados; estados finais têm lista vazia. A mudança de status é condicionada ao status lido (`findOneAndUpdate({ _id, status: atual })`): com dois admins ao mesmo tempo, um recebe 200 e o outro 409. O mesmo vale para o limite de 5 arquivos: o `$push` exige que `files.{5-n}` ainda não exista, então dois uploads simultâneos não passam de 5. Os dois casos têm teste de integração, e um teste de mutação (removendo a condição) confirma que os testes falham sem ela.
 
-**Upload.** Passa pelo backend (Multer em memória, 10 MB por arquivo, 5 arquivos). O tipo é decidido pelos primeiros bytes (PDF, PNG, JPEG), nunca pelo nome ou pelo `Content-Type`: um executável renomeado para `.pdf` recebe 415. Usei um pipe próprio (`ParseUploadsPipe`) em vez do `ParseFilePipeBuilder` do Nest porque o validador nativo responde 400 para tipo errado e o contrato pede 415; com um só ponto de validação, a regra não se duplica. A chave no S3 é `rental-requests/{id}/{uuid}.{ext}`; o nome original nunca entra nela.
+**Upload.** Passa pelo backend (Multer em memória, 10 MB por arquivo, 5 arquivos). O tipo é decidido pelos primeiros bytes (PDF, PNG, JPEG), nunca pelo nome ou pelo `Content-Type`: um executável renomeado para `.pdf` recebe 415. Usei um pipe próprio (`ParseUploadsPipe`) em vez do `ParseFilePipeBuilder` do Nest porque o validador nativo responde 400 para tipo errado e o contrato pede 415; com um só ponto de validação, a regra não se duplica. A chave no S3 é `rental-requests/{id}/{uuid}.{ext}`; o nome original nunca entra nela. Opcionalmente, `STORAGE_QUOTA_MB` limita a soma de todos os arquivos guardados: antes de enviar, a API soma os tamanhos no Mongo e recusa com 507 o upload que passaria do teto (solicitações sem anexo continuam aceitas).
 
-**Consistência MongoDB × S3.** A regra é: o Mongo nunca aponta para um objeto inexistente. Na criação e na adição, o arquivo vai ao S3 antes do Mongo, e se a escrita no Mongo falha ou não se aplica, os objetos enviados são apagados. Na remoção e na substituição, o Mongo muda primeiro e o objeto antigo é apagado depois; se o S3 falhar aí, sobra um objeto órfão (privado) registrado em log com a chave.
+**Consistência MongoDB × S3.** A regra é: o Mongo nunca aponta para um objeto inexistente. Na criação e na adição, o arquivo vai ao S3 antes do Mongo, e se a escrita no Mongo falha ou não se aplica, os objetos enviados são apagados. Na remoção e na substituição, o Mongo muda primeiro e o objeto antigo é apagado depois; se o S3 falhar aí, sobra um objeto órfão (privado) registrado em log com a chave. Antes de adicionar ou substituir, uma leitura barata confere se a solicitação existe, aceita mudança e tem espaço, para nada subir ao S3 à toa; a garantia continua sendo a escrita condicional. Na substituição, a condição inclui a chave lida: duas trocas simultâneas do mesmo arquivo dão uma 200 e uma 409, sem risco de apagar o arquivo vigente.
 
 **Segurança.**
-- **Token de consulta**: 256 bits aleatórios, exibido uma vez; o banco guarda só o SHA-256 (bcrypt não agrega com token longo e aleatório). Vai no header `X-Consultation-Token`, nunca na URL, e é comparado com `timingSafeEqual`. Token errado e id inexistente devolvem o mesmo 404, para não revelar quais ids existem.
+- **Token de consulta**: 256 bits aleatórios, exibido uma vez; o banco guarda só o SHA-256 (bcrypt não agrega com token longo e aleatório). Vai no header `X-Consultation-Token`, nunca na URL, e é comparado com `timingSafeEqual`. Token errado e id inexistente devolvem o mesmo 404, para não revelar quais ids existem. A consulta lê do banco só o resumo público (status, datas, quantidade de arquivos) e o hash; dados pessoais nem saem do Mongo nessa rota.
 - **Admin**: login com bcrypt e JWT de 1h. A senha é comparada mesmo com e-mail errado, para o tempo de resposta não revelar o e-mail.
 - **Documentos**: bucket sem acesso anônimo; acesso só por URL assinada de 5 minutos, com o nome original sanitizado e o tipo detectado no upload. A rota aceita `?disposition=inline` (visualizar) ou `attachment` (padrão, baixar). A URL é gerada com `S3_PUBLIC_ENDPOINT`, porque o navegador não resolve o host interno do MinIO.
 - **API**: `ValidationPipe` com `whitelist` e `forbidNonWhitelisted` (campo extra dá 400), ids validados antes de chegar ao Mongo, `helmet`, CORS restrito a `FRONTEND_URL`, rate limit de 10/min por IP (por rota) no login, na criação e na consulta pública, e erro inesperado como 500 genérico sem stack.
 
-**Frontend.** Páginas finas que só renderizam a view de cada feature; primitivas de UI em `components/ui/`; um único cliente HTTP (`lib/api/client.ts`) que injeta o JWT, transforma o erro da API em `ApiError` e encerra a sessão no 401; mensagens escolhidas pelo código de erro, não pelo texto. O JWT fica em `sessionStorage` (trade-off em Limitações). Filtro e página da listagem ficam na query string.
+**Frontend.** Páginas finas que só renderizam a view de cada feature; primitivas de UI em `components/ui/`; um único cliente HTTP (`lib/api/client.ts`) que injeta o JWT, transforma o erro da API em `ApiError` e encerra a sessão no 401; mensagens escolhidas pelo código de erro, não pelo texto. O formulário valida antes de enviar com as mesmas regras e textos do backend e mostra o erro embaixo de cada campo. A confirmação oferece copiar o identificador e o token ou baixar um comprovante `.txt` com os dois. O JWT fica em `sessionStorage` (trade-off em Limitações). Filtro e página da listagem ficam na query string.
 
 **Documentos na tela do admin: só consulta.** Na interface, o papel do admin é verificar o pedido: ele visualiza os documentos enviados pelo cliente, edita dados e muda o status, mas não adiciona, substitui nem remove arquivos. As rotas de gerenciamento de arquivos (H1) continuam na API, com testes de unidade e integração e demonstráveis pelo Swagger e pelo `requests.http`; deixá-las fora da UI segue a orientação do próprio plano de entrega.
 
@@ -180,17 +197,20 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 
 - **Organização do trabalho:** o backlog ficou num gerenciador de tarefas meu, exposto à IA por MCP. Cada tarefa nasceu com critérios de aceite observáveis, e só foi concluída com evidência ligada a um commit ou teste.
 - **Implementação:** a IA escreveu o código fase a fase (ambiente, regras puras, API, arquivos e S3, testes de integração, frontend, documentação). Ao fim de cada fase eu revisei o diff e fiz os commits; pedi mudanças de rumo quando discordei, como o rename de `Request` para `RentalRequest` (o nome colidia com a requisição HTTP), a separação de `rental-requests/` em pastas por papel e o padrão de componentes do frontend.
-- **Testes e revisão:** os casos de teste saíram das tabelas do planejamento; a IA também fez um code review explícito ao fim de cada fase, que pegou problemas reais (CORS respondendo para qualquer origem, `main.ts` subindo o servidor ao ser importado, um formulário que perdia edição).
+- **Testes e revisão:** os casos de teste saíram das tabelas do planejamento; a IA também fez um code review explícito ao fim de cada fase, que pegou problemas reais (CORS respondendo para qualquer origem, `main.ts` subindo o servidor ao ser importado, um formulário que perdia edição). Antes da entrega, uma varredura do backend inteiro achou mais: o 503 do health saindo como 500, erros do Multer em inglês, `PATCH` vazio alterando o `updatedAt` e a criação pública sem rate limit.
 
 **Como validei:**
 - testes automatizados: unitários e de integração no backend, e testes da lógica pura no frontend;
 - teste de mutação nos controles de concorrência: removi as condições atômicas e confirmei que os testes falham sem elas;
-- execução manual contra MongoDB e MinIO reais (upload, download pela URL assinada, expiração da URL, bucket sem acesso anônimo, corrida de requisições paralelas);
+- teste de mutação também no rate limit da criação e na cota de armazenamento;
+- execução manual contra MongoDB e MinIO reais (upload, download pela URL assinada, expiração da URL, bucket sem acesso anônimo, corrida de requisições paralelas) e, depois, contra um bucket S3 real na AWS (URL assinada, acesso anônimo negado, CORS do preview, remoção);
+- uso no navegador de cada fluxo, do formulário ao preview de documentos no admin;
 - leitura dos diffs antes de cada commit.
 
 ## Limitações conhecidas
 
-- **Token sem recuperação:** o token de consulta não pode ser recuperado se for perdido (H6).
+- **Token sem recuperação:** o token de consulta não pode ser recuperado se for perdido (H6); o comprovante `.txt` da confirmação ajuda o cliente a guardá-lo.
+- **Cota de armazenamento aproximada:** a soma é feita a cada upload; dois uploads simultâneos podem passar um pouco do teto.
 - **JWT em `sessionStorage`:** fica exposto a XSS; o mais seguro seria cookie `httpOnly` + `SameSite`. Foi escolhido pela simplicidade e porque o mesmo formato funciona no Swagger, no Supertest e no `requests.http`.
 - **Upload pela memória da API:** até 50 MB por requisição.
 - **Órfãos no S3:** quando o storage falha depois da escrita no Mongo, o objeto fica órfão (privado) e é só logado; não há job de limpeza.
@@ -203,7 +223,7 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 - **Sem antivírus:** o preview seguro e a validação por magic bytes reduzem o risco, mas não detectam um arquivo malicioso; quem baixar e abrir fora do sistema ainda depende do próprio antivírus.
 - **Gerenciamento de arquivos só pela API:** adicionar, substituir e remover documentos existem na API (Swagger e `requests.http`), mas não na tela do admin, que é de verificação.
 - **Credenciais de demo na tela de login:** existem para facilitar a avaliação e só aparecem com as variáveis `NEXT_PUBLIC_DEMO_ADMIN_*`; em produção ficam vazias.
-- **Design visual simples:** prioridade foi o fluxo funcional; a identidade visual se resume à paleta.
+- **Identidade visual enxuta:** paleta própria, uma home de apresentação e uma ilustração em SVG; sem design system completo nem teste de usabilidade.
 
 ## O que eu faria com mais tempo
 
@@ -215,6 +235,7 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 - **`statusHistory`** com origem, destino, autor e data, e log de acesso aos documentos.
 - **E-mail ao cliente** na criação e a cada mudança de status (fila + SES), o que também resolve o token perdido.
 - **Rate limit em Redis**, compartilhado entre instâncias.
+- **Cota por contador** atualizado a cada upload e remoção, em vez de somar a coleção a cada envio.
 - **Logs estruturados**, métricas e tracing (OpenTelemetry).
 - **Entrega:** Dockerfiles, pipeline (lint + testes + build) e deploy.
 - **LGPD:** política de retenção e anonimização dos dados pessoais.

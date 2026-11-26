@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Model } from 'mongoose';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -20,13 +21,20 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-// app real (pipes, filtro, guards); so o S3 vira memoria
-export async function createTestApp(): Promise<TestApp> {
+// app real (pipes, filtro, guards); so o S3 vira memoria.
+// rate limit desligado por padrao: as suites criam mais de 10 por minuto;
+// rate-limit.e2e-spec liga para testar o 429.
+export async function createTestApp({
+  rateLimit = false,
+} = {}): Promise<TestApp> {
   const storage = new InMemoryStorage();
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  const builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(STORAGE)
-    .useValue(storage)
-    .compile();
+    .useValue(storage);
+  if (!rateLimit) {
+    builder.overrideGuard(ThrottlerGuard).useValue({ canActivate: () => true });
+  }
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication<INestApplication<App>>();
   configureApp(app);

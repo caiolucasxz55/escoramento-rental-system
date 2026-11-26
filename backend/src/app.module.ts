@@ -18,7 +18,7 @@ import { RentalRequestsModule } from './rental-requests/rental-requests.module';
         serverSelectionTimeoutMS: 3000,
       }),
     }),
-    // so vale onde o ThrottlerGuard e aplicado (login e consulta publica)
+    // so vale onde ha @RateLimited (login, criacao e consulta publica)
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60_000, limit: 10 }],
       errorMessage: 'Muitas requisições; tente novamente em instantes.',

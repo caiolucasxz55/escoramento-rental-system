@@ -18,6 +18,7 @@ const BY_CODE: Record<string, string> = {
   UNSUPPORTED_FILE_TYPE: "Tipo de arquivo não aceito. Envie PDF, PNG ou JPEG.",
   TOO_MANY_FILES: "Envie no máximo 5 arquivos.",
   NOTHING_TO_UPDATE: "Nenhum dado foi alterado.",
+  STORAGE_QUOTA_EXCEEDED: "Limite de armazenamento atingido. Envie sem anexos ou tente mais tarde.",
   SERVICE_UNAVAILABLE: "Serviço indisponível no momento. Tente de novo em instantes.",
   TOO_MANY_REQUESTS: "Muitas tentativas em pouco tempo. Aguarde um minuto e tente de novo.",
   INTERNAL_ERROR: "Erro inesperado no servidor. Tente de novo em instantes.",

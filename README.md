@@ -77,6 +77,7 @@ Backend (`backend/.env.example`):
 | `S3_SECRET_ACCESS_KEY` | `minioadmin` | Credencial do storage |
 | `SIGNED_URL_TTL_SECONDS` | `300` | Validade da URL de download |
 | `MAX_FILE_SIZE_MB` | `10` | Limite por arquivo |
+| `STORAGE_QUOTA_MB` | `200` | Opcional: teto da soma de todos os arquivos guardados; passou dele, o upload dá 507. Vazio = sem cota |
 
 Frontend (`frontend/.env.example`):
 

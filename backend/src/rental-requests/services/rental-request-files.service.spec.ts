@@ -20,16 +20,20 @@ const upload = (name = 'contrato.pdf'): ValidatedUpload => ({
   type: { kind: 'pdf', ext: '.pdf', mimeType: 'application/pdf' },
 });
 
-const config = {
-  get: () => 300,
-} as unknown as ConfigService;
+const configWith = (quotaMb?: number) =>
+  ({
+    get: (key: string) => (key === 'STORAGE_QUOTA_MB' ? quotaMb : 300),
+  }) as unknown as ConfigService;
 
-function setup(model: Partial<Record<keyof Model<RentalRequest>, jest.Mock>>) {
+function setup(
+  model: Partial<Record<keyof Model<RentalRequest>, jest.Mock>>,
+  quotaMb?: number,
+) {
   const storage = new InMemoryStorage();
   const files = new RentalRequestFilesService(
     model as unknown as Model<RentalRequest>,
     storage,
-    config as never,
+    configWith(quotaMb) as never,
   );
   return { storage, files };
 }
@@ -64,6 +68,48 @@ describe('RentalRequestFilesService', () => {
       .mockImplementation(() => undefined);
   });
   afterEach(() => jest.restoreAllMocks());
+
+  describe('cota de armazenamento', () => {
+    const MB = 1024 * 1024;
+    const big = (size: number) => ({ ...upload(), size });
+    const usage = (total: number) =>
+      jest.fn().mockResolvedValue(total ? [{ total }] : []);
+
+    it('sem STORAGE_QUOTA_MB nem consulta o uso', async () => {
+      const aggregate = usage(0);
+      const { files, storage } = setup({ aggregate });
+
+      await files.uploadAll(id, [upload()]);
+
+      expect(aggregate).not.toHaveBeenCalled();
+      expect(storage.objects.size).toBe(1);
+    });
+
+    it('dentro da cota: envia', async () => {
+      const { files, storage } = setup({ aggregate: usage(1 * MB) }, 2);
+
+      await files.uploadAll(id, [big(1 * MB)]);
+
+      expect(storage.objects.size).toBe(1);
+    });
+
+    it('passando da cota: 507 e nada vai para o storage', async () => {
+      const { files, storage } = setup({ aggregate: usage(1 * MB) }, 2);
+
+      await expect(
+        files.uploadAll(id, [big(MB / 2), big(MB / 2 + 1)]),
+      ).rejects.toMatchObject({ code: 'STORAGE_QUOTA_EXCEEDED', status: 507 });
+      expect(storage.objects.size).toBe(0);
+    });
+
+    it('sem arquivos passa mesmo com a cota estourada', async () => {
+      const aggregate = usage(5 * MB);
+      const { files } = setup({ aggregate }, 2);
+
+      await expect(files.uploadAll(id, [])).resolves.toEqual([]);
+      expect(aggregate).not.toHaveBeenCalled();
+    });
+  });
 
   describe('uploadAll', () => {
     it('grava com chave rental-requests/{id}/{uuid}.{ext}, sem o nome original', async () => {

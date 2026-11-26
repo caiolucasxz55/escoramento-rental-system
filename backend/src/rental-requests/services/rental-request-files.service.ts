@@ -10,7 +10,10 @@ import {
   type Disposition,
   type Storage,
 } from '../../storage/storage.interface';
-import { MAX_FILES_PER_REQUEST } from '../rules/file-validation';
+import {
+  MAX_FILES_PER_REQUEST,
+  megabytesToBytes,
+} from '../rules/file-validation';
 import type { ValidatedUpload } from '../pipes/parse-uploads.pipe';
 import { DetailView, toDetail } from '../mappers/rental-request.mappers';
 import { FileMeta, RentalRequest } from '../schemas/rental-request.schema';
@@ -36,6 +39,7 @@ const noFiles = (message: string) =>
 export class RentalRequestFilesService {
   private readonly logger = new Logger(RentalRequestFilesService.name);
   private readonly signedUrlTtl: number;
+  private readonly quotaBytes: number | null;
 
   constructor(
     @InjectModel(RentalRequest.name)
@@ -44,6 +48,8 @@ export class RentalRequestFilesService {
     config: ConfigService<EnvironmentVariables, true>,
   ) {
     this.signedUrlTtl = config.get('SIGNED_URL_TTL_SECONDS', { infer: true });
+    const quota = config.get('STORAGE_QUOTA_MB', { infer: true });
+    this.quotaBytes = quota ? megabytesToBytes(quota) : null;
   }
 
   // tudo ou nada: se um envio falhar, apaga os que ja subiram
@@ -51,6 +57,7 @@ export class RentalRequestFilesService {
     rentalRequestId: Types.ObjectId,
     uploads: ValidatedUpload[],
   ): Promise<FileMeta[]> {
+    await this.ensureQuota(uploads);
     const sent: FileMeta[] = [];
     try {
       for (const upload of uploads) {
@@ -168,6 +175,23 @@ export class RentalRequestFilesService {
       disposition,
     });
     return { url, expiresIn: this.signedUrlTtl };
+  }
+
+  // cota branda: dois uploads simultaneos podem passar um pouco do limite
+  private async ensureQuota(uploads: ValidatedUpload[]): Promise<void> {
+    if (this.quotaBytes === null || uploads.length === 0) return;
+
+    const [usage] = await this.model.aggregate<{ total: number }>([
+      { $group: { _id: null, total: { $sum: { $sum: '$files.size' } } } },
+    ]);
+    const incoming = uploads.reduce((sum, { size }) => sum + size, 0);
+    if ((usage?.total ?? 0) + incoming > this.quotaBytes) {
+      throw new AppException(
+        'STORAGE_QUOTA_EXCEEDED',
+        HttpStatus.INSUFFICIENT_STORAGE,
+        'Limite de armazenamento atingido. Envie sem anexos ou tente mais tarde.',
+      );
+    }
   }
 
   private toMeta(

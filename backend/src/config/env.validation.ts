@@ -82,6 +82,12 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   MAX_FILE_SIZE_MB: number = 10;
+
+  // soma de todos os arquivos guardados; vazio = sem cota
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  STORAGE_QUOTA_MB?: number;
 }
 
 export function validateEnv(

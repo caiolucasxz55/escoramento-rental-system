@@ -54,7 +54,7 @@ export function ConfirmationCard({ created }: ConfirmationCardProps) {
         onCopy={() => copy("token", created.token)}
       />
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap [&>*]:w-full sm:[&>*]:w-auto">
         <Button onClick={() => copy("both", both)}>
           {copied === "both" ? "Copiado" : "Copiar os dois"}
         </Button>

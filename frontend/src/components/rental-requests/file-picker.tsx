@@ -87,6 +87,7 @@ export function FilePicker({ files, onChange, onError, disabled }: FilePickerPro
               <Button
                 variant="ghost"
                 size="icon"
+                className="size-10"
                 aria-label={`Remover ${file.name}`}
                 disabled={disabled}
                 onClick={() => remove(index)}

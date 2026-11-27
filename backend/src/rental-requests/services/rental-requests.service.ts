@@ -34,6 +34,7 @@ import {
   EDITABLE_STATUSES,
   RentalRequestStatus,
 } from '../rules/status-transitions';
+import { searchDigits, searchPattern } from '../rules/search';
 
 export interface CreatedRentalRequest {
   id: string;
@@ -45,6 +46,19 @@ export interface Page<T> {
   data: T[];
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
+
+// trecho em nome, e-mail ou telefone; sem indice de texto: varre a colecao (ok no volume do desafio)
+const searchFilter = (q: string) => {
+  const contains = { $regex: searchPattern(q), $options: 'i' };
+  const digits = searchDigits(q);
+  return {
+    $or: [
+      { name: contains },
+      { email: contains },
+      ...(digits ? [{ phone: { $regex: digits } }] : []),
+    ],
+  };
+};
 
 @Injectable()
 export class RentalRequestsService {
@@ -105,8 +119,9 @@ export class RentalRequestsService {
     page,
     limit,
     status,
+    q,
   }: ListQueryDto): Promise<Page<ListItemView>> {
-    const filter = status ? { status } : {};
+    const filter = { ...(status && { status }), ...(q && searchFilter(q)) };
     const [rows, total] = await Promise.all([
       this.model
         .find(filter, {

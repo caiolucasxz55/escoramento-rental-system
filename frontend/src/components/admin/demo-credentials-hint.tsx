@@ -20,7 +20,7 @@ export function DemoCredentialsHint({ credentials, onUse }: DemoCredentialsHintP
         <dt className="text-ink-muted">Senha</dt>
         <dd className="font-mono break-all">{credentials.password}</dd>
       </dl>
-      <Button variant="outline" size="sm" className="mt-3" onClick={() => onUse(credentials)}>
+      <Button variant="outline" className="mt-3" onClick={() => onUse(credentials)}>
         Preencher
       </Button>
     </div>

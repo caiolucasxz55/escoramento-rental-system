@@ -19,15 +19,15 @@ export function Pagination({ page, totalPages, onPageChange, label, className }:
   const pages = Math.max(totalPages, 1);
   return (
     <nav aria-label="Paginação" className={cn("flex items-center justify-between gap-3", className)}>
-      <Button variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-        <ChevronLeft aria-hidden /> Anterior
+      <Button variant="outline" className="px-3 sm:px-4" disabled={page <= 1} onClick={() => onPageChange(page - 1)} aria-label="Página anterior">
+        <ChevronLeft aria-hidden /> <span className="hidden sm:inline">Anterior</span>
       </Button>
       <p className="text-center text-sm text-ink-muted">
         {label && <span className="block font-medium text-ink">{label}</span>}
         Página {page} de {pages}
       </p>
-      <Button variant="outline" disabled={page >= pages} onClick={() => onPageChange(page + 1)}>
-        Próxima <ChevronRight aria-hidden />
+      <Button variant="outline" className="px-3 sm:px-4" disabled={page >= pages} onClick={() => onPageChange(page + 1)} aria-label="Próxima página">
+        <span className="hidden sm:inline">Próxima</span> <ChevronRight aria-hidden />
       </Button>
     </nav>
   );

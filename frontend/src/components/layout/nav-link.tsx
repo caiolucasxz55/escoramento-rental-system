@@ -13,7 +13,7 @@ export function NavLink({ href, children }: { href: string; children: ReactNode 
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "rounded-md px-3 py-2 font-medium text-ink-muted transition-colors hover:text-ink",
+        "inline-flex h-10 items-center rounded-md px-2.5 font-medium text-ink-muted transition-colors hover:text-ink sm:px-3",
         active && "bg-brand-50 text-brand-700",
       )}
     >

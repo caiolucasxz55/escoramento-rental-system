@@ -22,10 +22,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <header className="border-t-4 border-b border-t-brand-500 border-b-line bg-surface">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-          <Link href="/admin" className="font-semibold text-ink">
+          <Link href="/admin" className="inline-flex h-10 items-center gap-1 font-semibold text-ink">
             Escoramento <span className="font-normal text-ink-muted">· Admin</span>
           </Link>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
+          <Button variant="ghost" onClick={handleLogout}>
             <LogOut aria-hidden /> Sair
           </Button>
         </div>

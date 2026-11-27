@@ -26,7 +26,7 @@ interface StatusFilterProps {
 
 export function StatusFilter({ value, onChange, counts }: StatusFilterProps) {
   return (
-    <div role="group" aria-label="Filtrar por status" className="-mx-1 flex gap-2 overflow-x-auto px-1 py-0.5">
+    <div role="group" aria-label="Filtrar por status" className="-mx-1 flex gap-2 overflow-x-auto px-1 py-0.5 [mask-image:linear-gradient(to_right,black_85%,transparent)] sm:[mask-image:none]">
       {OPTIONS.map((option) => {
         const active = option.value === value;
         const count = counts ? counts[option.value ?? "all"] : null;

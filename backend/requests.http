@@ -88,6 +88,10 @@ Content-Type: application/json
 GET {{api}}/admin/requests?page=1&limit=10&status=PENDING
 Authorization: Bearer {{accessToken}}
 
+### Buscar por trecho de nome, e-mail ou telefone (ignora acentos; combina com status)
+GET {{api}}/admin/requests?q=construtora&status=PENDING
+Authorization: Bearer {{accessToken}}
+
 ### Detalhe com os arquivos (pegue o fileId daqui)
 GET {{api}}/admin/requests/{{id}}
 Authorization: Bearer {{accessToken}}

@@ -1,7 +1,8 @@
 "use client";
 
+import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Inbox, X } from "lucide-react";
+import { Inbox, SearchX, X } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { pageRange, parseListQuery, toQueryString, type ListQuery } from "@/lib/
 import { cn } from "@/lib/utils";
 
 import { RentalRequestsTable } from "./rental-requests-table";
+import { SearchBox } from "./search-box";
 import { StatusFilter } from "./status-filter";
 
 const PAGE_SIZE = 10;
@@ -32,28 +34,39 @@ export function RentalRequestsListView() {
   const { data, error, loading } = useApiResource(queryString, () =>
     adminApi.listRentalRequests({ ...query, limit: PAGE_SIZE }),
   );
-  const counts = useStatusCounts();
+  const counts = useStatusCounts(query.q);
 
   // filtro e pagina vivem na URL: recarregar ou compartilhar mantem a tela
   const navigate = (next: ListQuery) => router.replace(`${pathname}${toQueryString(next)}`);
   const range = data ? pageRange(data.meta) : null;
+  const filtered = Boolean(query.status || query.q);
+
+  // estavel: o SearchBox usa no efeito da espera; busca nova volta para a pagina 1
+  const status = query.status;
+  const search = useCallback(
+    (q: string | undefined) => router.replace(`${pathname}${toQueryString({ page: 1, status, q })}`),
+    [router, pathname, status],
+  );
 
   return (
     <>
       <PageHeader title="Solicitações" subtitle="Pedidos de locação recebidos pelo site" />
 
       <Card className="overflow-hidden p-0 sm:p-0">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
-          <StatusFilter
-            value={query.status}
-            counts={counts}
-            onChange={(status) => navigate({ page: 1, status })}
-          />
-          {query.status && (
-            <Button variant="ghost" size="sm" onClick={() => navigate({ page: 1 })}>
-              <X aria-hidden /> Limpar filtro
-            </Button>
-          )}
+        <div className="space-y-3 border-b border-line px-5 py-4 sm:px-6">
+          <SearchBox value={query.q} onSearch={search} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <StatusFilter
+              value={query.status}
+              counts={counts}
+              onChange={(next) => navigate({ page: 1, status: next, q: query.q })}
+            />
+            {filtered && (
+              <Button variant="ghost" onClick={() => navigate({ page: 1 })}>
+                <X aria-hidden /> Limpar filtros
+              </Button>
+            )}
+          </div>
         </div>
 
         {error ? (
@@ -76,11 +89,17 @@ export function RentalRequestsListView() {
           </div>
         ) : (
           <EmptyState
-            icon={Inbox}
-            title="Nenhuma solicitação"
-            description={query.status ? "Nada com esse status." : "As solicitações enviadas aparecem aqui."}
+            icon={query.q ? SearchX : Inbox}
+            title={query.q ? "Nada encontrado" : "Nenhuma solicitação"}
+            description={
+              query.q
+                ? `Nenhuma solicitação com “${query.q}”${query.status ? " nesse status" : ""}.`
+                : query.status
+                  ? "Nada com esse status."
+                  : "As solicitações enviadas aparecem aqui."
+            }
             action={
-              query.status && (
+              filtered && (
                 <Button variant="outline" onClick={() => navigate({ page: 1 })}>
                   Ver todas
                 </Button>

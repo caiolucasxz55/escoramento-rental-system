@@ -10,16 +10,16 @@ export function PublicShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-20 border-b border-line/70 bg-surface/85 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
           <BrandLogo />
-          <nav className="flex items-center gap-1 text-sm sm:gap-3">
+          <nav className="flex items-center text-sm sm:gap-3">
             <NavLink href="/status">
               <span className="sm:hidden">Acompanhar</span>
               <span className="hidden sm:inline">Acompanhar solicitação</span>
             </NavLink>
             <Link
               href="/admin"
-              className="group inline-flex items-center gap-1.5 rounded-md px-3 py-2 font-semibold text-brand-700 transition-colors hover:text-brand-600"
+              className="group inline-flex h-10 items-center gap-1.5 rounded-md px-2.5 font-semibold text-brand-700 transition-colors hover:text-brand-600 sm:px-3"
             >
               <span className="hidden sm:inline">Área administrativa</span>
               <span className="sm:hidden">Admin</span>

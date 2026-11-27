@@ -62,6 +62,7 @@ export interface ListRentalRequestsParams {
   page?: number;
   limit?: number;
   status?: RentalRequestStatus;
+  q?: string;
 }
 
 export interface SignedUrl {

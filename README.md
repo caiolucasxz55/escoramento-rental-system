@@ -152,7 +152,7 @@ Documentação interativa em **`/api/docs`** (Swagger) e exemplos prontos em [`b
 | POST | `/api/public/requests` | Público (multipart, até 5 arquivos) | 201 `{ id, token, status }` |
 | GET | `/api/public/requests/:id/status` | Header `X-Consultation-Token` | 200 |
 | POST | `/api/auth/login` | Público | 200 `{ accessToken, expiresIn }` |
-| GET | `/api/admin/requests?page=&limit=&status=` | JWT | 200 `{ data, meta }` |
+| GET | `/api/admin/requests?page=&limit=&status=&q=` | JWT | 200 `{ data, meta }` |
 | GET | `/api/admin/requests/:id` | JWT | 200 |
 | PATCH | `/api/admin/requests/:id` | JWT | 200 |
 | PATCH | `/api/admin/requests/:id/status` | JWT | 200 |
@@ -194,6 +194,8 @@ O `message` vem em português, pronto para o usuário; o frontend escolhe o text
 - **Respostas por mappers** (`toPublicStatus`, `toListItem`, `toDetail`); o `toJSON` do schema é só rede de segurança.
 
 **Modelagem.** Uma coleção `rental_requests` com os metadados dos arquivos embutidos (no máximo 5). Toda alteração é atômica em um documento, sem transação. Índices `{status:1, createdAt:-1}` e `{createdAt:-1}` para a listagem.
+
+**Busca no admin.** O parâmetro `q` procura um trecho no nome, no e-mail e no telefone (pelos dígitos), sem diferenciar maiúsculas nem acentos ("joao" acha "João"), combinado com o filtro de status e a paginação no servidor. O termo vira uma expressão regular com os caracteres especiais escapados (`rules/search.ts`), então "(.*" busca o texto literal em vez de casar tudo. Na tela, a busca espera 350 ms depois da última tecla e fica na URL, como o filtro.
 
 **Regras de status com concorrência.** O mapa de transições define os próximos estados; estados finais têm lista vazia. A mudança de status é condicionada ao status lido (`findOneAndUpdate({ _id, status: atual })`): com dois admins ao mesmo tempo, um recebe 200 e o outro 409. O mesmo vale para o limite de 5 arquivos: o `$push` exige que `files.{5-n}` ainda não exista, então dois uploads simultâneos não passam de 5. Os dois casos têm teste de integração, e um teste de mutação (removendo a condição) confirma que os testes falham sem ela.
 
@@ -264,22 +266,21 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 - **Sem histórico:** não há registro de mudanças de status nem log de acesso aos documentos.
 - **Sem testes de componente no frontend:** só a lógica pura (`lib/`) é testada.
 - **Rate limit por instância:** fica em memória; com várias instâncias, cada uma conta separado.
-- **Chave de deploy no GitHub:** o deploy usa a chave fixa de um usuário IAM só com as ações de publicar no Lightsail. O ideal seria OIDC (credencial temporária, sem chave guardada); ficou a chave pela simplicidade de configurar numa conta AWS nova. Vale revogá-la depois da avaliação.
+- **Busca sem índice:** um trecho no meio do texto não usa índice, então a busca percorre a coleção. Serve para o volume do desafio; com muitos registros, o caminho é o Atlas Search.
+- **Chave de deploy no GitHub:** o deploy usa a chave fixa de um usuário IAM só com as ações de publicar no Lightsail. O ideal seria OIDC (credencial temporária, sem chave guardada); ficou a chave pela simplicidade de configurar numa conta AWS nova.
 - **Chave do S3 no Lightsail:** o Container Service não assume papel IAM, então a API usa a chave de um usuário IAM restrito ao prefixo `rental-requests/`; ela fica nas variáveis do deployment, visíveis no console do Lightsail para quem tem acesso à conta.
-- **Atlas aberto a qualquer IP:** o Container Service não tem IP de saída fixo; a proteção do banco é a senha do usuário (só `readWrite`).
-- **Sem busca:** a listagem filtra só por status, sem busca textual.
 - **Confirmações nativas:** aprovar e cancelar usam o `confirm` do navegador.
 - **Sem antivírus:** o preview seguro e a validação por magic bytes reduzem o risco, mas não detectam um arquivo malicioso; quem baixar e abrir fora do sistema ainda depende do próprio antivírus.
 - **Gerenciamento de arquivos só pela API:** adicionar, substituir e remover documentos existem na API (Swagger e `requests.http`), mas não na tela do admin, que é de verificação.
 - **Credenciais de demo na tela de login:** existem para facilitar a avaliação e só aparecem com as variáveis `NEXT_PUBLIC_DEMO_ADMIN_*`; em produção ficam vazias.
 - **Identidade visual enxuta:** paleta própria, uma home de apresentação e uma ilustração em SVG; sem design system completo nem teste de usabilidade.
 
-## O que eu faria com mais tempo
+## O que eu faria para evoluir
 
 - **Upload direto ao S3:** URL pré-assinada de `PUT` para um prefixo de quarentena, com validação (magic bytes + antivírus) disparada por evento antes de mover para o prefixo final.
 - **Limpeza de órfãos:** job que compara as chaves do bucket com os metadados do Mongo, ou padrão outbox com `PENDING_DELETE`.
 - **Paginação por cursor** (`createdAt` + `_id`), que não degrada em páginas altas.
-- **Busca** por nome, e-mail e descrição, e filtro por período.
+- **Atlas Search** para a busca: índice de texto com tolerância a erro de digitação, e busca também na descrição.
 - **Usuários com papéis**, cookie `httpOnly` e refresh token.
 - **`statusHistory`** com origem, destino, autor e data, e log de acesso aos documentos.
 - **E-mail ao cliente** na criação e a cada mudança de status (fila + SES), o que também resolve o token perdido.

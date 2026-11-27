@@ -44,3 +44,17 @@ describe("toQueryString", () => {
     expect(toQueryString({ page: 2, status: "PENDING" })).toBe("?status=PENDING&page=2");
   });
 });
+
+describe("busca (q)", () => {
+  it("le o termo sem espacos nas pontas", () => {
+    expect(parseListQuery(params("q=%20joao%20&status=PENDING"))).toEqual({ page: 1, status: "PENDING", q: "joao" });
+  });
+
+  it.each(["q=a", "q=%20%20", `q=${"x".repeat(101)}`])("termo fora de 2 a 100 caracteres (%s) e ignorado", (qs) => {
+    expect(parseListQuery(params(qs)).q).toBeUndefined();
+  });
+
+  it("vai para a URL junto do status e da pagina", () => {
+    expect(toQueryString({ page: 2, status: "PENDING", q: "joão silva" })).toBe("?q=jo%C3%A3o+silva&status=PENDING&page=2");
+  });
+});

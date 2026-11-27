@@ -30,7 +30,7 @@ export function HomeHero() {
             </Button>
             <Link
               href="/status"
-              className="group inline-flex items-center gap-1 text-sm font-semibold text-ink transition-colors hover:text-brand-600"
+              className="group inline-flex -my-2.5 items-center py-2.5 gap-1 text-sm font-semibold text-ink transition-colors hover:text-brand-600"
             >
               Já fiz uma solicitação
               <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />

@@ -1,4 +1,4 @@
-const { esmCompat } = require('../jest.config.cjs');
+const esmCompat = require('../jest.esm-compat.cjs');
 
 /** @type {import('jest').Config} */
 module.exports = {

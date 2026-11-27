@@ -23,8 +23,8 @@ export function FileRow({ file, onPreview }: FileRowProps) {
   const Icon = isImage ? FileImage : FileText;
 
   return (
-    <li className="flex items-center gap-4 px-5 py-4 sm:px-6">
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+    <li className="flex items-center gap-3 px-5 py-4 sm:gap-4 sm:px-6">
+      <span className="flex size-10 shrink-0 items-center sm:size-12 justify-center rounded-lg bg-brand-50 text-brand-600">
         <Icon className="size-6" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
@@ -34,8 +34,8 @@ export function FileRow({ file, onPreview }: FileRowProps) {
           {formatDateTime(file.uploadedAt)}
         </p>
       </div>
-      <Button variant="outline" onClick={onPreview}>
-        <Eye aria-hidden /> Visualizar
+      <Button variant="outline" className="shrink-0 px-3 sm:px-4" onClick={onPreview} aria-label={`Visualizar ${file.originalName}`}>
+        <Eye aria-hidden /> <span className="hidden sm:inline">Visualizar</span>
       </Button>
     </li>
   );

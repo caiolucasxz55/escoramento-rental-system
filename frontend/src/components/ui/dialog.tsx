@@ -54,7 +54,7 @@ export function Dialog({
         <div className={cn("flex flex-col", viewer ? "h-full" : "max-h-[calc(100vh-4rem)]")}>
           <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
             <h2 className="min-w-0 truncate font-semibold">{title}</h2>
-            <Button variant="ghost" size="icon" aria-label="Fechar" onClick={onClose}>
+            <Button variant="ghost" size="icon" className="size-10" aria-label="Fechar" onClick={onClose}>
               <X aria-hidden />
             </Button>
           </header>

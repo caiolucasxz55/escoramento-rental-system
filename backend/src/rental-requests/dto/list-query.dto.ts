@@ -1,5 +1,14 @@
-import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Length,
+  Max,
+  Min,
+} from 'class-validator';
+import { SEARCH_LENGTH } from '../rules/search';
 import { RentalRequestStatus } from '../rules/status-transitions';
 import { INVALID_STATUS_MESSAGE } from './change-status.dto';
 
@@ -22,4 +31,15 @@ export class ListQueryDto {
   @IsOptional()
   @IsEnum(RentalRequestStatus, { message: INVALID_STATUS_MESSAGE })
   status?: RentalRequestStatus;
+
+  /** trecho de nome, e-mail ou telefone; ignora maiusculas e acentos */
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() || undefined : value,
+  )
+  @IsOptional()
+  @IsString({ message: 'A busca deve ser um texto.' })
+  @Length(SEARCH_LENGTH.min, SEARCH_LENGTH.max, {
+    message: `A busca deve ter entre ${SEARCH_LENGTH.min} e ${SEARCH_LENGTH.max} caracteres.`,
+  })
+  q?: string;
 }

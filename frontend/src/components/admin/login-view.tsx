@@ -48,7 +48,7 @@ export function LoginView() {
       <div className="w-full max-w-sm">
         <Link
           href="/"
-          className="mb-3 inline-flex items-center gap-1 text-sm text-ink-muted hover:text-brand-600"
+          className="mb-3 inline-flex -my-2.5 items-center py-2.5 gap-1 text-sm text-ink-muted hover:text-brand-600"
         >
           <ArrowLeft className="size-4" aria-hidden /> Voltar para o site
         </Link>

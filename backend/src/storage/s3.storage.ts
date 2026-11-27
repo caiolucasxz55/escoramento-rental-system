@@ -15,10 +15,6 @@ import {
   Storage,
 } from './storage.interface';
 
-// sem chave: o SDK usa a cadeia padrao (papel do Lambda, perfil local...)
-const credentialsFrom = (accessKeyId?: string, secretAccessKey?: string) =>
-  accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined;
-
 @Injectable()
 export class S3Storage implements Storage {
   private readonly bucket: string;
@@ -34,10 +30,10 @@ export class S3Storage implements Storage {
     const base = {
       region: get('S3_REGION'),
       forcePathStyle: get('S3_FORCE_PATH_STYLE'),
-      credentials: credentialsFrom(
-        get('S3_ACCESS_KEY_ID'),
-        get('S3_SECRET_ACCESS_KEY'),
-      ),
+      credentials: {
+        accessKeyId: get('S3_ACCESS_KEY_ID'),
+        secretAccessKey: get('S3_SECRET_ACCESS_KEY'),
+      },
     };
     const endpoint = get('S3_ENDPOINT');
     this.client = new S3Client({ ...base, endpoint });

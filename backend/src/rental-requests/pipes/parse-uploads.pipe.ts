@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { AppException } from '../../common/app-exception';
 import { megabytesToBytes } from '../../common/upload-limits';
 import { EnvironmentVariables } from '../../config/env.validation';
-import { uploadTooLarge } from '../errors';
 import {
   checkFile,
   DetectedFileType,
@@ -36,23 +35,17 @@ const MESSAGE_BY_REASON: Record<Rejection, string> = {
 @Injectable()
 export class ParseUploadsPipe implements PipeTransform {
   private readonly maxBytes: number;
-  private readonly maxTotalMb?: number;
 
   constructor(config: ConfigService<EnvironmentVariables, true>) {
     this.maxBytes = megabytesToBytes(
       config.get('MAX_FILE_SIZE_MB', { infer: true }),
     );
-    this.maxTotalMb = config.get('MAX_TOTAL_UPLOAD_MB', { infer: true });
   }
 
   transform(
     input: Express.Multer.File | Express.Multer.File[] | undefined,
   ): ValidatedUpload[] {
     const files = input === undefined ? [] : [input].flat();
-    const total = files.reduce((sum, { size }) => sum + size, 0);
-    if (this.maxTotalMb && total > megabytesToBytes(this.maxTotalMb)) {
-      throw uploadTooLarge(this.maxTotalMb);
-    }
 
     return files.map((file) => {
       const check = checkFile(file.buffer, this.maxBytes);

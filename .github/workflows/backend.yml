@@ -34,13 +34,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run test:e2e
-      - uses: aws-actions/setup-sam@v2
-        with:
-          use-installer: true
-      - name: Valida os templates
-        run: |
-          sam validate --lint --region us-east-1 --template template.yaml
-          sam validate --lint --region us-east-1 --template deploy/github-oidc.yaml
+      - name: Valida o template do papel de deploy
+        run: pipx run cfn-lint deploy/github-oidc.yaml
 
   # so na main, so depois dos testes; credencial temporaria por OIDC
   deploy:
@@ -51,55 +46,72 @@ jobs:
       id-token: write
       contents: read
     env:
-      # binario do Mongo de teste nao entra no pacote
-      MONGOMS_DISABLE_POSTINSTALL: "1"
+      SERVICE: ${{ vars.LIGHTSAIL_SERVICE || 'escoramento-api' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-      - name: Monta o pacote da funcao
-        run: |
-          npm ci
-          npm run build
-          npm prune --omit=dev
-          mkdir -p .lambda-artifact
-          cp -r dist node_modules package.json .lambda-artifact/
-          du -sh .lambda-artifact
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-      - uses: aws-actions/setup-sam@v2
-        with:
-          use-installer: true
+      - name: Instala o lightsailctl (plugin do push de imagem)
+        run: |
+          sudo curl -fsSL https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl \
+            -o /usr/local/bin/lightsailctl
+          sudo chmod +x /usr/local/bin/lightsailctl
+      - name: Monta e envia a imagem
+        id: image
+        run: |
+          docker build -t "escoramento-api:${GITHUB_SHA}" .
+          out=$(aws lightsail push-container-image --service-name "$SERVICE" \
+            --label api --image "escoramento-api:${GITHUB_SHA}")
+          echo "$out"
+          # a saida termina com: Refer to this image as ":<servico>.api.<n>" in deployments.
+          echo "ref=$(echo "$out" | grep -oE ':[A-Za-z0-9-]+\.api\.[0-9]+' | tail -1)" >> "$GITHUB_OUTPUT"
       - name: Publica
         env:
+          IMAGE: ${{ steps.image.outputs.ref }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL || 'https://escoramento-rental-system.vercel.app' }}
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
           S3_BUCKET: ${{ vars.S3_BUCKET }}
           S3_REGION: ${{ vars.AWS_REGION }}
-        # valores via env: o shell nao reinterpreta os "$" do hash bcrypt
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+        # jq --arg: os "$" do hash bcrypt e os "&" da URI do Mongo entram literais
         run: |
-          sam deploy \
-            --template-file template.yaml \
-            --stack-name escoramento-api \
-            --resolve-s3 \
-            --capabilities CAPABILITY_IAM \
-            --no-confirm-changeset \
-            --no-fail-on-empty-changeset \
-            --parameter-overrides \
-              "MongodbUri=$MONGODB_URI" \
-              "JwtSecret=$JWT_SECRET" \
-              "AdminEmail=$ADMIN_EMAIL" \
-              "AdminPasswordHash=$ADMIN_PASSWORD_HASH" \
-              "S3Bucket=$S3_BUCKET" \
-              "S3Region=$S3_REGION"
-      - name: URL da API
+          test -n "$IMAGE" || { echo "imagem nao identificada no push"; exit 1; }
+          jq -n \
+            --arg image "$IMAGE" --arg frontend "$FRONTEND_URL" --arg mongo "$MONGODB_URI" \
+            --arg jwt "$JWT_SECRET" --arg email "$ADMIN_EMAIL" --arg hash "$ADMIN_PASSWORD_HASH" \
+            --arg bucket "$S3_BUCKET" --arg region "$S3_REGION" \
+            --arg key "$S3_ACCESS_KEY_ID" --arg secret "$S3_SECRET_ACCESS_KEY" \
+            '{api: {image: $image, ports: {"3001": "HTTP"}, environment: {
+              PORT: "3001", FRONTEND_URL: $frontend, MONGODB_URI: $mongo,
+              JWT_SECRET: $jwt, ADMIN_EMAIL: $email, ADMIN_PASSWORD_HASH: $hash,
+              S3_BUCKET: $bucket, S3_REGION: $region, S3_FORCE_PATH_STYLE: "false",
+              S3_ACCESS_KEY_ID: $key, S3_SECRET_ACCESS_KEY: $secret,
+              STORAGE_QUOTA_MB: "200", TRUST_PROXY_HOPS: "1"}}}' > "$RUNNER_TEMP/containers.json"
+          jq -n '{containerName: "api", containerPort: 3001, healthCheck: {
+            path: "/api/health", intervalSeconds: 10, timeoutSeconds: 5,
+            healthyThreshold: 2, unhealthyThreshold: 3, successCodes: "200"}}' > "$RUNNER_TEMP/endpoint.json"
+          aws lightsail create-container-service-deployment --service-name "$SERVICE" \
+            --containers "file://$RUNNER_TEMP/containers.json" \
+            --public-endpoint "file://$RUNNER_TEMP/endpoint.json" > /dev/null
+          rm "$RUNNER_TEMP/containers.json"
+      - name: Espera a nova versao ficar ativa
         run: |
-          aws cloudformation describe-stacks --stack-name escoramento-api \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text
+          for i in $(seq 1 60); do
+            state=$(aws lightsail get-container-service-deployments --service-name "$SERVICE" \
+              --query 'deployments[0].state' --output text)
+            echo "deployment: $state"
+            [ "$state" = "ACTIVE" ] && break
+            [ "$state" = "FAILED" ] && { echo "falhou: veja os logs do container no console do Lightsail"; exit 1; }
+            sleep 15
+          done
+          [ "$state" = "ACTIVE" ] || { echo "tempo esgotado"; exit 1; }
+          url=$(aws lightsail get-container-services --service-name "$SERVICE" \
+            --query 'containerServices[0].url' --output text)
+          echo "API: ${url}api"
+          curl -fsS "${url}api/health"

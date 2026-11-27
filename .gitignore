@@ -29,7 +29,3 @@ CLAUDE.local.md
 
 # material local do teste (enunciado etc.)
 docs/
-
-# pacote do Lambda e cache do SAM (montados no CI)
-.lambda-artifact/
-.aws-sam/

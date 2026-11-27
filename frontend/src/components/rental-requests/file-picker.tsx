@@ -4,7 +4,7 @@ import { useId, useRef, useState, type DragEvent } from "react";
 import { FileText, UploadCloud, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ACCEPT_ATTRIBUTE, MAX_FILES, UPLOAD_LIMITS, validateFiles } from "@/lib/file-rules";
+import { ACCEPT_ATTRIBUTE, MAX_FILE_SIZE_MB, MAX_FILES, validateFiles } from "@/lib/file-rules";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -73,8 +73,7 @@ export function FilePicker({ files, onChange, onError, disabled }: FilePickerPro
           {files.length >= MAX_FILES ? "Limite de arquivos atingido" : "Arraste os arquivos ou clique para escolher"}
         </span>
         <span className="text-xs text-ink-muted">
-          PDF, PNG ou JPEG · até {UPLOAD_LIMITS.maxFileMb} MB cada
-          {UPLOAD_LIMITS.maxTotalMb && ` · ${UPLOAD_LIMITS.maxTotalMb} MB no total`} · {files.length}/{MAX_FILES}
+          PDF, PNG ou JPEG · até {MAX_FILE_SIZE_MB} MB cada · {files.length}/{MAX_FILES}
         </span>
       </label>
 

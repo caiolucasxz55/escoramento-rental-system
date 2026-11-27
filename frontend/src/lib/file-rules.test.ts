@@ -36,24 +36,4 @@ describe("validateFiles", () => {
   it("recusa arquivo vazio", () => {
     expect(validateFiles([file("vazio.pdf", 0)])).toMatch(/vazio/);
   });
-
-  describe("limite total por envio (producao: Lambda)", () => {
-    const MB = 1024 * 1024;
-    const prod = { maxFileMb: 4, maxTotalMb: 4 };
-
-    it("soma acima do teto e recusada, mesmo com cada arquivo dentro do limite", () => {
-      expect(validateFiles([file("a.pdf", 3 * MB), file("b.pdf", 2 * MB)], prod)).toMatch(
-        /somam 5,0 MB; o limite é 4 MB por envio/,
-      );
-    });
-
-    it("dentro do teto passa", () => {
-      expect(validateFiles([file("a.pdf", 2 * MB), file("b.pdf", 2 * MB)], prod)).toBeNull();
-    });
-
-    it("sem teto (padrao local) so vale o limite por arquivo", () => {
-      expect(validateFiles([file("a.pdf", 9 * MB), file("b.pdf", 9 * MB)], { maxFileMb: 10 })).toBeNull();
-    });
-  });
 });
-

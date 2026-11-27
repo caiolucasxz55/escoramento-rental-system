@@ -1,5 +1,5 @@
 import { ApiError } from "@/lib/api/client";
-import { MAX_FILE_SIZE_MB, UPLOAD_LIMITS } from "@/lib/file-rules";
+import { MAX_FILE_SIZE_MB } from "@/lib/file-rules";
 
 // mensagem por `code` da API; o texto do backend so aparece em erro de validacao
 const BY_CODE: Record<string, string> = {
@@ -17,7 +17,6 @@ const BY_CODE: Record<string, string> = {
   PAYLOAD_TOO_LARGE: `Arquivo acima de ${MAX_FILE_SIZE_MB} MB.`,
   UNSUPPORTED_FILE_TYPE: "Tipo de arquivo não aceito. Envie PDF, PNG ou JPEG.",
   TOO_MANY_FILES: "Envie no máximo 5 arquivos.",
-  UPLOAD_TOO_LARGE: `Os arquivos passam do limite de envio${UPLOAD_LIMITS.maxTotalMb ? ` (${UPLOAD_LIMITS.maxTotalMb} MB no total)` : ""}. Envie arquivos menores.`,
   NOTHING_TO_UPDATE: "Nenhum dado foi alterado.",
   STORAGE_QUOTA_EXCEEDED: "Limite de armazenamento atingido. Envie sem anexos ou tente mais tarde.",
   SERVICE_UNAVAILABLE: "Serviço indisponível no momento. Tente de novo em instantes.",
@@ -30,8 +29,6 @@ const GENERIC = "Não foi possível concluir a ação.";
 export function errorMessage(error: unknown, overrides: Record<string, string> = {}): string {
   if (!(error instanceof ApiError)) return GENERIC;
   if (overrides[error.code]) return overrides[error.code];
-  // 413 de fora da API (ex.: limite de payload do Lambda) nao vem no formato padrao
-  if (error.status === 413 && !BY_CODE[error.code]) return BY_CODE.UPLOAD_TOO_LARGE;
   if (error.code === "VALIDATION_ERROR" || error.code === "BAD_REQUEST") {
     return `Confira os dados: ${error.message}`;
   }

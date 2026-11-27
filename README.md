@@ -238,7 +238,7 @@ O `message` vem em português, pronto para o usuário; o frontend escolhe o text
 **Ambiente.**
 - A MinIO deixou de publicar `minio/minio` no Docker Hub; o compose usa `cgr.dev/chainguard/minio`, o mesmo servidor, mantido e com o `mc` embutido.
 - No compose, o `backend/.env` entra com `format: raw`: sem isso o Compose trata os `$` do hash bcrypt como variáveis e a API recusa subir com o hash corrompido.
-- Os pacotes do Nest 12 são só ESM; para os testes rodarem no Node 22, o Jest converte `@nestjs/*` para CommonJS só durante o teste (`jest.config.ts`).
+- Os pacotes do Nest 12 são só ESM; para os testes rodarem no Node 22, o Jest converte `@nestjs/*` para CommonJS só durante o teste (`jest.config.cjs`).
 
 ## Hipóteses adotadas
 

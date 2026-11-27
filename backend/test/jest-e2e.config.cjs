@@ -1,7 +1,7 @@
-import type { Config } from 'jest';
-import { esmCompat } from '../jest.config';
+const { esmCompat } = require('../jest.config.cjs');
 
-const config: Config = {
+/** @type {import('jest').Config} */
+module.exports = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '..',
   testRegex: 'test/.*\\.e2e-spec\\.ts$',
@@ -13,5 +13,3 @@ const config: Config = {
   // primeira execucao baixa o binario do Mongo
   testTimeout: 60_000,
 };
-
-export default config;

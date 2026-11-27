@@ -38,7 +38,6 @@ export type FileCheck =
       reason: 'EMPTY_FILE' | 'FILE_TOO_LARGE' | 'UNSUPPORTED_FILE_TYPE';
     };
 
-// controller mapeia: EMPTY_FILE 400, FILE_TOO_LARGE 413, UNSUPPORTED_FILE_TYPE 415
 export function checkFile(buffer: Buffer, maxSizeBytes: number): FileCheck {
   if (buffer.length === 0) return { ok: false, reason: 'EMPTY_FILE' };
   if (buffer.length > maxSizeBytes) {
@@ -53,7 +52,7 @@ export function checkFile(buffer: Buffer, maxSizeBytes: number): FileCheck {
 
 const MAX_FILENAME_LENGTH = 200;
 
-// so para exibicao e Content-Disposition; nunca entra na chave do S3
+// so para exibicao e Content-Disposition
 export function sanitizeFilename(name: string, fallback: string): string {
   const clean = name
     .replace(/[\p{Cc}"'\\/]/gu, '')

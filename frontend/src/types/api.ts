@@ -1,4 +1,4 @@
-// Espelha o formato de erro e de paginacao da API (secao 8)
+// Espelha o formato de erro e de paginacao da API (common/all-exceptions.filter e o Page do service)
 
 export interface ApiErrorBody {
   statusCode: number;

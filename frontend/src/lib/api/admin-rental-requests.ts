@@ -41,8 +41,7 @@ export function changeStatus(
   });
 }
 
-// adicionar/substituir/remover arquivo existem na API, mas a tela do admin so consulta.
-// inline: para o preview; attachment: download explicito
+// a tela so consulta arquivos (adicionar/substituir/remover ficam na API); inline = preview, attachment = baixar
 export function getFileUrl(
   id: string,
   fileId: string,

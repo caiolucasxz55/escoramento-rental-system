@@ -31,7 +31,6 @@ const MESSAGE_BY_REASON: Record<Rejection, string> = {
   UNSUPPORTED_FILE_TYPE: 'Tipo de arquivo não aceito (PDF, PNG ou JPEG)',
 };
 
-// o tipo vem do conteudo; nome e mimetype do navegador sao ignorados
 @Injectable()
 export class ParseUploadsPipe implements PipeTransform {
   private readonly maxBytes: number;

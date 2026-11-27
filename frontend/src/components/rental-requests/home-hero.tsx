@@ -80,7 +80,6 @@ function HeroVisual() {
         </div>
       </div>
 
-      {/* card flutuante */}
       <div className="absolute -top-5 -right-2 hidden items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 shadow-lg sm:flex lg:-right-8">
         <span className="flex size-8 items-center justify-center rounded-full bg-success-soft text-success">
           <Check className="size-4" aria-hidden />

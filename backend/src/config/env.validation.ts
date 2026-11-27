@@ -89,8 +89,7 @@ export class EnvironmentVariables {
   @Min(1)
   STORAGE_QUOTA_MB?: number;
 
-  // atras de balanceador (Lightsail): quantos saltos do X-Forwarded-For sao confiaveis.
-  // vazio = ignora o header, senao qualquer cliente forjaria o IP e furaria o rate limit
+  // atras de balanceador (Lightsail): 1. Vazio ignora o X-Forwarded-For, senao qualquer um forjaria o IP
   @IsOptional()
   @IsInt()
   @Min(1)

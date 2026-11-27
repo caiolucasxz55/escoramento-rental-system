@@ -5,7 +5,6 @@ import {
   Storage,
 } from './storage.interface';
 
-// usado nos testes no lugar do S3
 @Injectable()
 export class InMemoryStorage implements Storage {
   readonly objects = new Map<string, { body: Buffer; contentType: string }>();

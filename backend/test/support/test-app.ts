@@ -21,9 +21,7 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-// app real (pipes, filtro, guards); so o S3 vira memoria.
-// rate limit desligado por padrao: as suites criam mais de 10 por minuto;
-// rate-limit.e2e-spec liga para testar o 429.
+// app real, so o S3 vira memoria; rate limit desligado (as suites criam mais de 10/min), exceto onde se testa o 429
 export async function createTestApp({
   rateLimit = false,
 } = {}): Promise<TestApp> {

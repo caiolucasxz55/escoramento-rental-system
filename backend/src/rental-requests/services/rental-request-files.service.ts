@@ -35,8 +35,7 @@ export interface SignedUrl {
 
 type FileRef = Pick<FileMeta, '_id' | 'key'>;
 
-// Mongo nunca aponta para objeto inexistente; no pior caso sobra um objeto
-// orfao (privado) no S3, logado com a chave.
+// Mongo nunca aponta para objeto inexistente; no pior caso sobra um orfao privado no S3, logado
 @Injectable()
 export class RentalRequestFilesService {
   private readonly logger = new Logger(RentalRequestFilesService.name);

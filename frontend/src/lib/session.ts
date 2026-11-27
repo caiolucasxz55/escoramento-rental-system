@@ -22,6 +22,6 @@ export function clearToken(): void {
   try {
     window.sessionStorage.removeItem(TOKEN_KEY);
   } catch {
-    // idem
+    // storage bloqueado: nao ha o que limpar
   }
 }

@@ -28,4 +28,13 @@ describe("errorMessage", () => {
       "Não foi possível concluir a ação.",
     );
   });
+
+  it("UPLOAD_TOO_LARGE da API e o 413 do Lambda (fora do formato) viram a mesma mensagem", () => {
+    const api = errorMessage(new ApiError(413, "UPLOAD_TOO_LARGE", ""));
+    const lambda = errorMessage(new ApiError(413, "HTTP_ERROR", "Request Entity Too Large"));
+
+    expect(api).toMatch(/limite de envio/);
+    expect(lambda).toBe(api);
+  });
 });
+

@@ -66,6 +66,13 @@ export const fileLimitReached = () =>
     `Limite de ${MAX_FILES_PER_REQUEST} arquivos por solicitação.`,
   );
 
+export const uploadTooLarge = (maxTotalMb: number) =>
+  new AppException(
+    'UPLOAD_TOO_LARGE',
+    HttpStatus.PAYLOAD_TOO_LARGE,
+    `Os arquivos somam mais de ${maxTotalMb} MB. Envie arquivos menores ou em menor quantidade.`,
+  );
+
 export const storageQuotaExceeded = () =>
   new AppException(
     'STORAGE_QUOTA_EXCEEDED',

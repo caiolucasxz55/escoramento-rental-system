@@ -2,9 +2,11 @@ import { ConfigService } from '@nestjs/config';
 import { ParseUploadsPipe } from './parse-uploads.pipe';
 
 const PDF = Buffer.from('%PDF-1.4 conteudo');
-const pipe = new ParseUploadsPipe({
-  get: () => 1, // MAX_FILE_SIZE_MB
-} as unknown as ConfigService as never);
+const pipeWith = (env: Record<string, number | undefined>) =>
+  new ParseUploadsPipe({
+    get: (key: string) => env[key],
+  } as unknown as ConfigService as never);
+const pipe = pipeWith({ MAX_FILE_SIZE_MB: 1 });
 
 const file = (buffer: Buffer, originalname = 'a.pdf') =>
   ({ buffer, originalname, size: buffer.length }) as Express.Multer.File;
@@ -46,5 +48,21 @@ describe('ParseUploadsPipe', () => {
     expect(() =>
       pipe.transform([file(PDF), file(Buffer.from('texto'))]),
     ).toThrow(expect.objectContaining({ code: 'UNSUPPORTED_FILE_TYPE' }));
+  });
+
+  describe('MAX_TOTAL_UPLOAD_MB', () => {
+    const half = file(Buffer.concat([PDF, Buffer.alloc(600 * 1024)]));
+    const limited = pipeWith({ MAX_FILE_SIZE_MB: 1, MAX_TOTAL_UPLOAD_MB: 1 });
+
+    it('a soma passando do teto -> 413 UPLOAD_TOO_LARGE, mesmo com cada arquivo dentro do limite', () => {
+      expect(() => limited.transform([half, half])).toThrow(
+        expect.objectContaining({ code: 'UPLOAD_TOO_LARGE', status: 413 }),
+      );
+    });
+
+    it('dentro do teto passa; sem a variavel nao ha teto', () => {
+      expect(limited.transform([half])).toHaveLength(1);
+      expect(pipe.transform([half, half])).toHaveLength(2);
+    });
   });
 });

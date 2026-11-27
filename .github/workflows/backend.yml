@@ -1,0 +1,105 @@
+name: backend
+
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# um deploy por vez; um push novo nao derruba o que esta publicando
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:e2e
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      - name: Valida os templates
+        run: |
+          sam validate --lint --region us-east-1 --template template.yaml
+          sam validate --lint --region us-east-1 --template deploy/github-oidc.yaml
+
+  # so na main, so depois dos testes; credencial temporaria por OIDC
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      # binario do Mongo de teste nao entra no pacote
+      MONGOMS_DISABLE_POSTINSTALL: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Monta o pacote da funcao
+        run: |
+          npm ci
+          npm run build
+          npm prune --omit=dev
+          mkdir -p .lambda-artifact
+          cp -r dist node_modules package.json .lambda-artifact/
+          du -sh .lambda-artifact
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      - name: Publica
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_REGION: ${{ vars.AWS_REGION }}
+        # valores via env: o shell nao reinterpreta os "$" do hash bcrypt
+        run: |
+          sam deploy \
+            --template-file template.yaml \
+            --stack-name escoramento-api \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              "MongodbUri=$MONGODB_URI" \
+              "JwtSecret=$JWT_SECRET" \
+              "AdminEmail=$ADMIN_EMAIL" \
+              "AdminPasswordHash=$ADMIN_PASSWORD_HASH" \
+              "S3Bucket=$S3_BUCKET" \
+              "S3Region=$S3_REGION"
+      - name: URL da API
+        run: |
+          aws cloudformation describe-stacks --stack-name escoramento-api \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text

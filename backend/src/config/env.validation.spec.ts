@@ -72,4 +72,27 @@ describe('validateEnv', () => {
       'JWT_EXPIRES_IN',
     );
   });
+
+  it('credenciais do S3 opcionais: sem as duas, vale a cadeia padrao da AWS', () => {
+    const {
+      S3_ACCESS_KEY_ID: _id,
+      S3_SECRET_ACCESS_KEY: _secret,
+      ...semChave
+    } = valid;
+
+    expect(validateEnv(semChave).S3_ACCESS_KEY_ID).toBeUndefined();
+  });
+
+  it('so uma das credenciais do S3 e recusada', () => {
+    expect(() => validateEnv({ ...valid, S3_SECRET_ACCESS_KEY: '' })).toThrow(
+      'S3_ACCESS_KEY_ID e S3_SECRET_ACCESS_KEY',
+    );
+  });
+
+  it('MAX_TOTAL_UPLOAD_MB opcional e numerico', () => {
+    expect(validateEnv(valid).MAX_TOTAL_UPLOAD_MB).toBeUndefined();
+    expect(
+      validateEnv({ ...valid, MAX_TOTAL_UPLOAD_MB: '4' }).MAX_TOTAL_UPLOAD_MB,
+    ).toBe(4);
+  });
 });

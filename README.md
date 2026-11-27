@@ -90,17 +90,20 @@ Backend (`backend/.env.example`):
 | `S3_ENDPOINT` | `http://localhost:9000` | Endpoint do S3; vazio na AWS |
 | `S3_PUBLIC_ENDPOINT` | `http://localhost:9000` | Host usado nas URLs assinadas; vazio na AWS |
 | `S3_FORCE_PATH_STYLE` | `true` | Necessário no MinIO; `false` na AWS |
-| `S3_ACCESS_KEY_ID` | `minioadmin` | Credencial do storage |
-| `S3_SECRET_ACCESS_KEY` | `minioadmin` | Credencial do storage |
+| `S3_ACCESS_KEY_ID` | `minioadmin` | Credencial do storage; vazia no Lambda (vale o papel da função). Informe as duas ou nenhuma |
+| `S3_SECRET_ACCESS_KEY` | `minioadmin` | Credencial do storage; vazia no Lambda |
 | `SIGNED_URL_TTL_SECONDS` | `300` | Validade da URL de download |
 | `MAX_FILE_SIZE_MB` | `10` | Limite por arquivo |
 | `STORAGE_QUOTA_MB` | `200` | Opcional: teto da soma de todos os arquivos guardados; passou dele, o upload dá 507. Vazio = sem cota |
+| `MAX_TOTAL_UPLOAD_MB` | `4` | Opcional: teto da soma dos arquivos de um envio (413 `UPLOAD_TOO_LARGE`). Vazio = sem teto; no Lambda é 4 |
 
 Frontend (`frontend/.env.example`):
 
 | Variável | Exemplo | Uso |
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:3001/api` | Base da API |
+| `NEXT_PUBLIC_MAX_FILE_SIZE_MB` | `4` | Opcional: limite por arquivo no formulário (padrão 10) |
+| `NEXT_PUBLIC_MAX_TOTAL_UPLOAD_MB` | `4` | Opcional: limite da soma de um envio no formulário (padrão: sem teto) |
 | `NEXT_PUBLIC_DEMO_ADMIN_EMAIL` | `admin@escoramento.local` | Opcional: e-mail mostrado na tela de login (demo) |
 | `NEXT_PUBLIC_DEMO_ADMIN_PASSWORD` | `admin123` | Opcional: senha mostrada na tela de login (demo); vazia em produção |
 
@@ -119,6 +122,45 @@ O preview de PDF baixa o arquivo pelo navegador (pdf.js), então o bucket precis
 ```
 
 Validado contra um bucket real na AWS (`us-east-2`): upload, download pela URL assinada (200), o mesmo objeto sem assinatura (403), `disposition=inline` com o CORS do preview e remoção (a URL antiga passa a dar 404). Com um bucket real, vale definir `STORAGE_QUOTA_MB` para os testes manuais não acumularem arquivos sem limite.
+
+## Deploy (produção)
+
+- **Frontend:** Vercel, em https://escoramento-rental-system.vercel.app. O deploy é da própria integração da Vercel com o GitHub; o workflow `frontend.yml` só roda lint, typecheck, testes e build.
+- **Backend:** AWS Lambda com **Function URL** (gratuito até 1 milhão de requisições por mês, sem prazo; o API Gateway só é gratuito no primeiro ano). O handler é `backend/src/lambda.ts`: a mesma app do `main.ts`, sem `listen`, embrulhada pelo `@codegenie/serverless-express`. A infraestrutura está em `backend/template.yaml` (SAM).
+- **Banco:** MongoDB Atlas (plano gratuito M0).
+- **CI/CD:** `.github/workflows/backend.yml`. Em todo PR e push roda lint, testes unitários, testes e2e e `sam validate --lint`; num push na `main`, e só se tudo passar, publica com `sam deploy`. A autenticação na AWS é por **OIDC**: o GitHub recebe credenciais temporárias de um papel que só aceita workflows da `main` deste repositório. Nenhuma chave da AWS fica no GitHub.
+
+**Limite de upload no Lambda.** O Lambda aceita até 6 MB por requisição, e o multipart chega em base64 (~33% maior). Por isso, em produção, cada envio aceita até **4 MB somando os arquivos** (`MAX_FILE_SIZE_MB=4` e `MAX_TOTAL_UPLOAD_MB=4` no template). O formulário avisa antes de enviar (variáveis `NEXT_PUBLIC_MAX_*`). Local e Docker seguem com 10 MB por arquivo.
+
+### Passos únicos
+
+1. **Atlas:** crie um cluster M0 na AWS, na mesma região do Lambda (a API espera até 3 s para achar o banco), um usuário só com `readWrite` no banco `escoramento` e libere `0.0.0.0/0` em *Network Access* (o Lambda fora de VPC não tem IP fixo; a proteção fica na senha forte do usuário).
+2. **Papel de deploy (OIDC)**, uma vez, com a AWS CLI logada numa conta com permissão de IAM:
+   ```bash
+   aws cloudformation deploy --region us-east-2 \
+     --template-file backend/deploy/github-oidc.yaml \
+     --stack-name escoramento-github-oidc \
+     --capabilities CAPABILITY_NAMED_IAM
+   # se a conta já tiver o provedor do GitHub: --parameter-overrides CreateOidcProvider=false
+   aws cloudformation describe-stacks --region us-east-2 --stack-name escoramento-github-oidc \
+     --query "Stacks[0].Outputs[0].OutputValue" --output text   # ARN do papel
+   ```
+   O papel só pode criar e atualizar a stack `escoramento-api`, a função, o papel dela (`escoramento-api-*`), o grupo de logs e o bucket de artefatos do SAM.
+3. **GitHub → Settings → Secrets and variables → Actions:**
+
+   | Tipo | Nome | Valor |
+   | --- | --- | --- |
+   | Secret | `AWS_DEPLOY_ROLE_ARN` | ARN do passo 2 |
+   | Secret | `MONGODB_URI` | string de conexão do Atlas |
+   | Secret | `JWT_SECRET` | valor aleatório longo |
+   | Secret | `ADMIN_PASSWORD_HASH` | saída do `npm run hash-password` |
+   | Variable | `AWS_REGION` | região do bucket (ex.: `us-east-2`) |
+   | Variable | `S3_BUCKET` | nome do bucket (só o nome, não o ARN) |
+   | Variable | `ADMIN_EMAIL` | e-mail do admin |
+
+4. **Bucket:** acrescente `https://escoramento-rental-system.vercel.app` em `AllowedOrigins` na regra de CORS (seção "Configurando S3"). A função acessa o bucket pelo próprio papel, só em `rental-requests/*`; não precisa de chave.
+5. **Primeiro deploy:** push na `main` (ou *Run workflow* em Actions). O último passo do job imprime a URL da função.
+6. **Vercel → Settings → Environment Variables:** `NEXT_PUBLIC_API_URL` = URL da função + `api` (ex.: `https://xxxx.lambda-url.us-east-2.on.aws/api`), `NEXT_PUBLIC_MAX_FILE_SIZE_MB=4` e `NEXT_PUBLIC_MAX_TOTAL_UPLOAD_MB=4`; depois, *Redeploy* (as `NEXT_PUBLIC_*` entram no build).
 
 ## Endpoints
 
@@ -208,6 +250,7 @@ O `message` vem em português, pronto para o usuário; o frontend escolhe o text
 | H7 | Autenticação admin | Um único admin definido por variáveis de ambiente (e-mail + hash bcrypt da senha). Sem cadastro de usuários. |
 | H8 | Telefone | Aceita apenas dígitos após normalização, de 10 a 13 caracteres (cobre fixo, celular e DDI 55). |
 | H9 | Arquivo substituído | O arquivo antigo é apagado do S3; não há versionamento. |
+| H10 | Limite de 10 MB por arquivo ("sugerido") | Local e Docker seguem os 10 MB. No deploy (Lambda), o payload máximo é 6 MB, então cada envio aceita até 4 MB somando os arquivos; o formulário avisa antes. A evolução que devolve os 10 MB é o upload direto ao S3 por URL pré-assinada. |
 
 ## Uso de IA
 
@@ -235,7 +278,9 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 - **Admin único:** sem cadastro de usuários nem papéis (H7).
 - **Sem histórico:** não há registro de mudanças de status nem log de acesso aos documentos.
 - **Sem testes de componente no frontend:** só a lógica pura (`lib/`) é testada.
-- **Rate limit por instância:** fica em memória; com várias instâncias, cada uma conta separado.
+- **Rate limit por instância:** fica em memória; com várias instâncias, cada uma conta separado. No Lambda, cada container conta o seu.
+- **Upload em produção limitado a 4 MB por envio:** é o teto do payload do Lambda; o upload direto ao S3 (abaixo) remove o limite.
+- **Atlas aberto a qualquer IP:** o Lambda sem VPC não tem IP fixo; a proteção do banco é a senha do usuário (só `readWrite`).
 - **Sem busca:** a listagem filtra só por status, sem busca textual.
 - **Confirmações nativas:** aprovar e cancelar usam o `confirm` do navegador.
 - **Sem antivírus:** o preview seguro e a validação por magic bytes reduzem o risco, mas não detectam um arquivo malicioso; quem baixar e abrir fora do sistema ainda depende do próprio antivírus.

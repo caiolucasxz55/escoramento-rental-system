@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  API de solicitacoes de locacao (NestJS) no Lambda com Function URL.
+  Publicado pelo workflow .github/workflows/backend.yml.
+
+Parameters:
+  MongodbUri:
+    Type: String
+    NoEcho: true
+  JwtSecret:
+    Type: String
+    NoEcho: true
+  AdminEmail:
+    Type: String
+  AdminPasswordHash:
+    Type: String
+    NoEcho: true
+  FrontendUrl:
+    Type: String
+    Default: https://escoramento-rental-system.vercel.app
+  S3Bucket:
+    Type: String
+  S3Region:
+    Type: String
+  StorageQuotaMb:
+    Type: String
+    Default: "200"
+
+Resources:
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: escoramento-api
+      # montado pelo CI: dist/ + node_modules de producao + package.json
+      CodeUri: .lambda-artifact/
+      Handler: dist/lambda.handler
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      MemorySize: 512
+      Timeout: 15
+      Environment:
+        Variables:
+          NODE_ENV: production
+          FRONTEND_URL: !Ref FrontendUrl
+          MONGODB_URI: !Ref MongodbUri
+          JWT_SECRET: !Ref JwtSecret
+          ADMIN_EMAIL: !Ref AdminEmail
+          ADMIN_PASSWORD_HASH: !Ref AdminPasswordHash
+          S3_BUCKET: !Ref S3Bucket
+          S3_REGION: !Ref S3Region
+          S3_FORCE_PATH_STYLE: "false"
+          # sem chave: o S3 usa o papel desta funcao (Policies abaixo)
+          # payload do Lambda e 6 MB e o multipart chega em base64: 4 MB de arquivos por envio
+          MAX_FILE_SIZE_MB: "4"
+          MAX_TOTAL_UPLOAD_MB: "4"
+          STORAGE_QUOTA_MB: !Ref StorageQuotaMb
+      FunctionUrlConfig:
+        # CORS fica com a API (lista com FRONTEND_URL), nao com a Function URL
+        AuthType: NONE
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [s3:PutObject, s3:GetObject, s3:DeleteObject]
+              Resource: !Sub arn:${AWS::Partition}:s3:::${S3Bucket}/rental-requests/*
+
+  # desde out/2025 a URL publica exige tambem InvokeFunction, so via URL
+  ApiFunctionUrlInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApiFunction
+      Action: lambda:InvokeFunction
+      Principal: "*"
+      InvokedViaFunctionUrl: true
+
+  # retencao curta: logs no CloudWatch ficam no gratuito
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/escoramento-api
+      RetentionInDays: 7
+
+Outputs:
+  ApiUrl:
+    Description: Base da API para o NEXT_PUBLIC_API_URL da Vercel (acrescente "api")
+    Value: !GetAtt ApiFunctionUrl.FunctionUrl

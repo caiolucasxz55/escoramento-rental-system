@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: "2010-09-09"
+# sem recursos serverless; o Transform so deixa o `sam validate` aceitar o arquivo
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Papel que o GitHub Actions assume por OIDC para publicar o escoramento-api.
+  Roda uma vez, a mao (ver README, secao Deploy). Nenhuma chave fica no GitHub.
+
+Parameters:
+  GitHubRepo:
+    Type: String
+    Default: caiolucasxz55/escoramento-rental-system
+  Branch:
+    Type: String
+    Default: main
+  ApiStackName:
+    Type: String
+    Default: escoramento-api
+  CreateOidcProvider:
+    Description: false se a conta ja tem o provedor token.actions.githubusercontent.com
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+
+Conditions:
+  ShouldCreateProvider: !Equals [!Ref CreateOidcProvider, "true"]
+
+Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: ShouldCreateProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: escoramento-github-deploy
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - ShouldCreateProvider
+                - !Ref GitHubOidcProvider
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                # so workflows deste repositorio, na branch de deploy (PR e fork nao assumem)
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubRepo}:ref:refs/heads/${Branch}
+      Policies:
+        - PolicyName: sam-deploy-escoramento-api
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: StackDaApiEBucketDoSam
+                Effect: Allow
+                Action: cloudformation:*
+                Resource:
+                  - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${ApiStackName}/*
+                  - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/aws-sam-cli-managed-default/*
+                  - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31
+              - Sid: LeituraDoCloudFormation
+                Effect: Allow
+                Action:
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:ListStacks
+                  - cloudformation:GetTemplateSummary
+                Resource: "*"
+              - Sid: ArtefatosDoSam
+                Effect: Allow
+                Action: s3:*
+                Resource:
+                  - arn:aws:s3:::aws-sam-cli-managed-default-*
+                  - arn:aws:s3:::aws-sam-cli-managed-default-*/*
+              - Sid: AFuncao
+                Effect: Allow
+                Action: lambda:*
+                Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ApiStackName}
+              - Sid: PapelDaFuncao
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:PassRole
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:GetRolePolicy
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ApiStackName}-*
+              - Sid: LogsDaFuncao
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:PutRetentionPolicy
+                  - logs:DeleteRetentionPolicy
+                  - logs:TagResource
+                  - logs:UntagResource
+                  - logs:ListTagsForResource
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ApiStackName}*
+              - Sid: ListarLogs
+                Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: "*"
+
+Outputs:
+  DeployRoleArn:
+    Description: Vai no secret AWS_DEPLOY_ROLE_ARN do repositorio
+    Value: !GetAtt DeployRole.Arn

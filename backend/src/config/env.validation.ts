@@ -67,13 +67,14 @@ export class EnvironmentVariables {
   @IsBoolean()
   S3_FORCE_PATH_STYLE: boolean = false;
 
+  // vazias no Lambda: vale o papel da funcao (cadeia padrao de credenciais da AWS)
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  S3_ACCESS_KEY_ID: string;
+  S3_ACCESS_KEY_ID?: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  S3_SECRET_ACCESS_KEY: string;
+  S3_SECRET_ACCESS_KEY?: string;
 
   @IsInt()
   @Min(1)
@@ -88,6 +89,12 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   STORAGE_QUOTA_MB?: number;
+
+  // soma dos arquivos de uma requisicao; no Lambda fica abaixo dos 6 MB do payload
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  MAX_TOTAL_UPLOAD_MB?: number;
 }
 
 export function validateEnv(
@@ -102,6 +109,13 @@ export function validateEnv(
     enableImplicitConversion: true,
   });
   const errors = validateSync(env, { skipMissingProperties: false });
+
+  // so uma das duas: provavelmente esquecimento, e a outra viria da cadeia padrao
+  if (Boolean(env.S3_ACCESS_KEY_ID) !== Boolean(env.S3_SECRET_ACCESS_KEY)) {
+    throw new Error(
+      'Variaveis de ambiente invalidas:\n  - S3_ACCESS_KEY_ID e S3_SECRET_ACCESS_KEY: informe as duas ou nenhuma',
+    );
+  }
 
   if (errors.length > 0) {
     const detail = errors

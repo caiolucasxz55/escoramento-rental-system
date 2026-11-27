@@ -126,7 +126,7 @@ Validado contra um bucket real na AWS (`us-east-2`): upload, download pela URL a
 - **Frontend:** Vercel, em https://escoramento-rental-system.vercel.app. O deploy é da integração da Vercel com o GitHub; o workflow `frontend.yml` só roda lint, typecheck, testes e build.
 - **Backend:** AWS **Lightsail Container Service**, rodando a mesma imagem do `backend/Dockerfile`. O Lightsail entrega a URL já em HTTPS (`*.cs.amazonlightsail.com`), o que a Vercel exige (página HTTPS não chama API HTTP). Plano Nano (512 MB; a API usa ~105 MB).
 - **Banco:** MongoDB Atlas (plano gratuito M0). **Arquivos:** o bucket S3 já validado.
-- **CI/CD:** `.github/workflows/backend.yml`. Em todo PR e push roda lint, testes unitários, testes e2e e `cfn-lint` no template do papel; num push na `main`, e só se tudo passar, monta a imagem, envia ao Lightsail, cria o deployment e espera a nova versão ficar ativa e responder no `/api/health`. A autenticação na AWS é por **OIDC**: o GitHub recebe credenciais temporárias de um papel que só aceita workflows da `main` deste repositório e só pode publicar imagem e deployment (não cria, apaga nem muda o plano do serviço).
+- **CI/CD:** `.github/workflows/backend.yml`. Em todo PR e push roda lint, testes unitários e testes e2e; num push na `main`, e só se tudo passar, monta a imagem, envia ao Lightsail, cria o deployment e espera a nova versão ficar ativa e responder no `/api/health`. A autenticação na AWS é pela chave de um **usuário IAM só de deploy**, guardada nos *secrets* do GitHub: a política dele (`backend/deploy/lightsail-deploy-policy.json`) só permite publicar imagem e deployment no Lightsail (não cria, apaga nem muda o plano do serviço, e não acessa S3 nem IAM). Antes de usar a chave, o workflow confere se todos os secrets existem e estão no formato certo.
 - **Rate limit atrás do balanceador:** o Lightsail entrega as requisições pelo balanceador; com `TRUST_PROXY_HOPS=1` a API usa o IP do cliente que o balanceador acrescenta no `X-Forwarded-For`, em vez de contar todo mundo como um só.
 
 ### Passos únicos
@@ -137,21 +137,12 @@ Validado contra um bucket real na AWS (`us-east-2`): upload, download pela URL a
    aws lightsail create-container-service --region us-east-2 \
      --service-name escoramento-api --power nano --scale 1
    ```
-3. **Papel de deploy (OIDC)**, uma vez, com a AWS CLI logada numa conta com permissão de IAM:
-   ```bash
-   aws cloudformation deploy --region us-east-2 \
-     --template-file backend/deploy/github-oidc.yaml \
-     --stack-name escoramento-github-oidc \
-     --capabilities CAPABILITY_NAMED_IAM
-   # se a conta já tiver o provedor do GitHub: --parameter-overrides CreateOidcProvider=false
-   aws cloudformation describe-stacks --region us-east-2 --stack-name escoramento-github-oidc \
-     --query "Stacks[0].Outputs[0].OutputValue" --output text   # ARN do papel
-   ```
+3. **Usuário de deploy:** no IAM, crie um usuário (ex.: `github-actions-deploy`), anexe a ele uma política com o conteúdo de `backend/deploy/lightsail-deploy-policy.json` (*Add permissions → Create inline policy → JSON*) e gere uma chave de acesso (*Security credentials → Create access key → Third-party service*).
 4. **GitHub → Settings → Secrets and variables → Actions:**
 
    | Tipo | Nome | Valor |
    | --- | --- | --- |
-   | Secret | `AWS_DEPLOY_ROLE_ARN` | ARN do passo 3 |
+   | Secret | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | chave do usuário de deploy do passo 3 |
    | Secret | `MONGODB_URI` | string de conexão do Atlas |
    | Secret | `JWT_SECRET` | valor aleatório longo |
    | Secret | `ADMIN_PASSWORD_HASH` | saída do `npm run hash-password` |
@@ -159,7 +150,8 @@ Validado contra um bucket real na AWS (`us-east-2`): upload, download pela URL a
    | Variable | `AWS_REGION` | região do bucket e do serviço (ex.: `us-east-2`) |
    | Variable | `S3_BUCKET` | nome do bucket (só o nome, não o ARN) |
    | Variable | `ADMIN_EMAIL` | e-mail do admin |
-   | Variable (opcional) | `FRONTEND_URL` / `LIGHTSAIL_SERVICE` | padrão: a URL da Vercel e `escoramento-api` |
+   | Variable | `LIGHTSAIL_SERVICE` | nome do serviço do passo 2 (padrão: `escoramento-api`) |
+   | Variable (opcional) | `FRONTEND_URL` | padrão: a URL da Vercel |
 
 5. **Bucket:** acrescente `https://escoramento-rental-system.vercel.app` em `AllowedOrigins` na regra de CORS (seção "Configurando S3").
 6. **Primeiro deploy:** push na `main` (ou *Run workflow* em Actions). O último passo imprime a URL da API e o resultado do health.
@@ -281,6 +273,7 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 - **Sem histórico:** não há registro de mudanças de status nem log de acesso aos documentos.
 - **Sem testes de componente no frontend:** só a lógica pura (`lib/`) é testada.
 - **Rate limit por instância:** fica em memória; com várias instâncias, cada uma conta separado.
+- **Chave de deploy no GitHub:** o deploy usa a chave fixa de um usuário IAM só com as ações de publicar no Lightsail. O ideal seria OIDC (credencial temporária, sem chave guardada); ficou a chave pela simplicidade de configurar numa conta AWS nova. Vale revogá-la depois da avaliação.
 - **Chave do S3 no Lightsail:** o Container Service não assume papel IAM, então a API usa a chave de um usuário IAM restrito ao prefixo `rental-requests/`; ela fica nas variáveis do deployment, visíveis no console do Lightsail para quem tem acesso à conta.
 - **Atlas aberto a qualquer IP:** o Container Service não tem IP de saída fixo; a proteção do banco é a senha do usuário (só `readWrite`).
 - **Sem busca:** a listagem filtra só por status, sem busca textual.

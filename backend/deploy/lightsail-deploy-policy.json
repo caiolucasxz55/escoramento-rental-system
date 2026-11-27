@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicarNoContainerService",
+      "Effect": "Allow",
+      "Action": [
+        "lightsail:CreateContainerServiceRegistryLogin",
+        "lightsail:RegisterContainerImage",
+        "lightsail:CreateContainerServiceDeployment",
+        "lightsail:GetContainerServices",
+        "lightsail:GetContainerServiceDeployments",
+        "lightsail:GetContainerImages"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

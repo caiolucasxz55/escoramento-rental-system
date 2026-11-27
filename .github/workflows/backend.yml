@@ -34,24 +34,55 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run test:e2e
-      - name: Valida o template do papel de deploy
-        run: pipx run cfn-lint deploy/github-oidc.yaml
 
-  # so na main, so depois dos testes; credencial temporaria por OIDC
+  # so na main, so depois dos testes; a chave de deploy so publica no Lightsail
   deploy:
     needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     env:
       SERVICE: ${{ vars.LIGHTSAIL_SERVICE || 'escoramento-api' }}
     steps:
       - uses: actions/checkout@v4
+      # falha cedo e diz o nome do que falta (nunca o valor)
+      - name: Confere secrets e variables
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+        run: |
+          missing=""
+          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY MONGODB_URI JWT_SECRET \
+                      ADMIN_PASSWORD_HASH S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY \
+                      AWS_REGION S3_BUCKET ADMIN_EMAIL; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Faltando em Settings > Secrets and variables > Actions:$missing"
+            exit 1
+          fi
+          # erros comuns ao colar: ARN ou nome do usuario no lugar da chave, aspas, espaco
+          if [[ ! "$AWS_ACCESS_KEY_ID" =~ ^(AKIA|ASIA)[A-Z0-9]{16}$ ]]; then
+            echo "::error::AWS_ACCESS_KEY_ID invalido: cole o Access key ID (20 caracteres, comeca com AKIA), sem espacos"
+            exit 1
+          fi
+          if [[ ! "$AWS_SECRET_ACCESS_KEY" =~ ^[A-Za-z0-9/+=]{40}$ ]]; then
+            echo "::error::AWS_SECRET_ACCESS_KEY invalido: cole o Secret access key (40 caracteres), sem espacos"
+            exit 1
+          fi
+          echo "tudo configurado; servico: $SERVICE"
+      # chave do usuario IAM de deploy (so as acoes de backend/deploy/lightsail-deploy-policy.json)
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
       - name: Instala o lightsailctl (plugin do push de imagem)
         run: |

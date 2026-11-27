@@ -4,6 +4,18 @@ Módulo full stack para clientes solicitarem a locação de escoramento (com at�
 
 **Stack:** NestJS 12 + TypeScript · MongoDB (Mongoose) · S3 (AWS SDK v3; MinIO no ambiente local) · Next.js 16 (App Router) + Tailwind · pdf.js · Jest, Supertest e mongodb-memory-server · Vitest · Swagger.
 
+## Produção
+
+| O quê | Link |
+| --- | --- |
+| Aplicação (cliente) | https://escoramento-rental-system.vercel.app |
+| Área administrativa | https://escoramento-rental-system.vercel.app/admin (as credenciais de demonstração aparecem na própria tela de login) |
+| API | https://esc-container-service.edb7c0jqc7pn0.us-east-2.cs.amazonlightsail.com/api |
+| Swagger | https://esc-container-service.edb7c0jqc7pn0.us-east-2.cs.amazonlightsail.com/api/docs |
+| Health | https://esc-container-service.edb7c0jqc7pn0.us-east-2.cs.amazonlightsail.com/api/health |
+
+Frontend na Vercel, API no AWS Lightsail Container Service, banco no MongoDB Atlas e documentos num bucket S3 privado. Os dados são fictícios; não envie dados pessoais reais. Detalhes em [Deploy (produção)](#deploy-produção).
+
 ## Pré-requisitos
 
 - **Node.js 22.12 ou mais novo** (desenvolvido e testado com 22.13.1)
@@ -250,7 +262,12 @@ O `message` vem em português, pronto para o usuário; o frontend escolhe o text
 
 Usei o **Claude Code** (Anthropic) como par de programação durante todo o projeto, a partir de um documento de planejamento que escrevi antes (arquitetura, hipóteses, regras, contratos e plano em fases).
 
-- **Organização do trabalho:** o backlog ficou num gerenciador de tarefas meu, exposto à IA por MCP. Cada tarefa nasceu com critérios de aceite observáveis, e só foi concluída com evidência ligada a um commit ou teste.
+- **Organização do trabalho com o Falange:** o backlog inteiro ficou no **Falange**, um gerenciador de tarefas que desenvolvi e que expõe as tarefas à IA por MCP. Ele foi peça central do projeto, porque trocou o "a IA diz que terminou" por regras que dá para auditar:
+  - **Backlog a partir do planejamento:** as tarefas de cada fase foram geradas do documento de planejamento e passaram por uma validação antes de existir. Toda tarefa precisava de 1 a 5 critérios de aceite **observáveis** ("POST com 6 arquivos retorna 400 TOO_MANY_FILES"); critério vago, como "não tem mais o botão", era recusado e reescrito.
+  - **Conclusão só com prova:** a API do Falange recusa concluir tarefa sem evidência ligada a cada critério. A IA tinha de ler o diff do commit, citar o teste que cobre o critério ou descrever a verificação manual; o título do commit não valia como prova. As **37 tarefas** do projeto foram fechadas assim, cada critério com sua evidência.
+  - **Estimativas calibradas:** antes de estimar, a IA consultava quanto as estimativas anteriores realmente levaram e ajustava (por exemplo, "P" vinha sendo superestimado e passou a "PP").
+  - **Ritmo e controle:** no fim de cada fase, testes, lint e build, code review e um relatório; os commits eram meus, e a fase seguinte só começava depois do meu "ok". Ações destrutivas, como apagar tarefas, sempre pediam confirmação.
+  - **Rastreabilidade:** decisões e mudanças de rumo ficaram registradas, como a troca do deploy no Lambda pelo Lightsail e de OIDC por chave de deploy. O uso real também gerou notas de melhoria para o próprio Falange.
 - **Implementação:** a IA escreveu o código fase a fase (ambiente, regras puras, API, arquivos e S3, testes de integração, frontend, documentação). Ao fim de cada fase eu revisei o diff e fiz os commits; pedi mudanças de rumo quando discordei, como o rename de `Request` para `RentalRequest` (o nome colidia com a requisição HTTP), a separação de `rental-requests/` em pastas por papel e o padrão de componentes do frontend.
 - **Testes e revisão:** os casos de teste saíram das tabelas do planejamento; a IA também fez um code review explícito ao fim de cada fase, que pegou problemas reais (CORS respondendo para qualquer origem, `main.ts` subindo o servidor ao ser importado, um formulário que perdia edição). Antes da entrega, uma varredura do backend inteiro achou mais: o 503 do health saindo como 500, erros do Multer em inglês, `PATCH` vazio alterando o `updatedAt` e a criação pública sem rate limit.
 

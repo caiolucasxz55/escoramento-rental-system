@@ -211,7 +211,7 @@ O `message` vem em português, pronto para o usuário; o frontend escolhe o text
 
 **Frontend.** Páginas finas que só renderizam a view de cada feature; primitivas de UI em `components/ui/`; um único cliente HTTP (`lib/api/client.ts`) que injeta o JWT, transforma o erro da API em `ApiError` e encerra a sessão no 401; mensagens escolhidas pelo código de erro, não pelo texto. O formulário valida antes de enviar com as mesmas regras e textos do backend e mostra o erro embaixo de cada campo. A confirmação oferece copiar o identificador e o token ou baixar um comprovante `.txt` com os dois. O JWT fica em `sessionStorage` (trade-off em Limitações). Filtro e página da listagem ficam na query string.
 
-**Documentos na tela do admin: só consulta.** Na interface, o papel do admin é verificar o pedido: ele visualiza os documentos enviados pelo cliente, edita dados e muda o status, mas não adiciona, substitui nem remove arquivos. As rotas de gerenciamento de arquivos (H1) continuam na API, com testes de unidade e integração e demonstráveis pelo Swagger e pelo `requests.http`; deixá-las fora da UI segue a orientação do próprio plano de entrega.
+**Documentos na tela do admin: só consulta.** Na interface, o papel do admin é verificar o pedido: ele visualiza os documentos enviados pelo cliente, edita dados e muda o status, mas não adiciona, substitui nem remove arquivos: os documentos são do cliente (H1). As rotas de gerenciamento continuam na API, com testes de unidade e integração e demonstráveis pelo Swagger e pelo `requests.http`, para correções pedidas pelo próprio cliente.
 
 **Visualização segura de documentos.** O admin vê os arquivos num preview dentro do sistema, sem baixá-los: o PDF é desenhado em `<canvas>` pelo pdf.js (o JavaScript do documento nunca executa e nenhum leitor de PDF do sistema é acionado) e a imagem aparece borrada até o admin clicar em "Mostrar". Baixar continua possível, como ação explícita e com aviso. Isso reduz o risco de um PDF malicioso explorar o leitor instalado e de conteúdo impróprio aparecer sem aviso.
 
@@ -224,7 +224,7 @@ O `message` vem em português, pronto para o usuário; o frontend escolhe o text
 
 | # | Ponto ambíguo | Hipótese adotada |
 | --- | --- | --- |
-| H1 | Quem envia os arquivos iniciais | O cliente anexa de 0 a 5 arquivos no mesmo envio da criação (multipart). Depois disso, só o admin adiciona, remove ou substitui. |
+| H1 | Quem envia e quem altera os documentos | Os documentos são do cliente, que anexa de 0 a 5 arquivos ao enviar a solicitação. O admin só visualiza e baixa; na tela dele não há como adicionar, trocar ou excluir arquivos. ficam como operação de exceção: autenticada, só em solicitação não finalizada, para atender um pedido do próprio cliente (arquivo errado ou enviado por engano). |
 | H2 | Quem altera o status | Somente o admin. O cliente apenas consulta. |
 | H3 | O que a consulta pública retorna | Identificador, status, `createdAt`, `updatedAt` e a quantidade de arquivos. Não retorna e-mail, telefone nem links de documentos. |
 | H4 | Edição em estados finais | Dados e arquivos só podem ser alterados em `PENDING` ou `UNDER_REVIEW`. Em `APPROVED`/`CANCELLED` a solicitação fica somente leitura (409). |
@@ -271,8 +271,8 @@ Usei o **Claude Code** (Anthropic) como par de programação durante todo o proj
 - **Chave do S3 no Lightsail:** o Container Service não assume papel IAM, então a API usa a chave de um usuário IAM restrito ao prefixo `rental-requests/`; ela fica nas variáveis do deployment, visíveis no console do Lightsail para quem tem acesso à conta.
 - **Confirmações nativas:** aprovar e cancelar usam o `confirm` do navegador.
 - **Sem antivírus:** o preview seguro e a validação por magic bytes reduzem o risco, mas não detectam um arquivo malicioso; quem baixar e abrir fora do sistema ainda depende do próprio antivírus.
-- **Gerenciamento de arquivos só pela API:** adicionar, substituir e remover documentos existem na API (Swagger e `requests.http`), mas não na tela do admin, que é de verificação.
-- **Credenciais de demo na tela de login:** existem para facilitar a avaliação e só aparecem com as variáveis `NEXT_PUBLIC_DEMO_ADMIN_*`; em produção ficam vazias.
+- **Cliente não corrige os próprios documentos sozinho:** depois de enviar, ele não tem como trocar um arquivo pela tela de consulta; a correção passa por um pedido ao operador, que usa as rotas de gerenciamento da API (H1). O caminho natural seria o cliente fazer isso com o identificador e o token, enquanto a solicitação estiver pendente.
+- **Credenciais de demo na tela de login:** só aparecem com as variáveis `NEXT_PUBLIC_DEMO_ADMIN_*`. No deploy desta entrega estão ligadas, com uma senha só de demonstração, para quem avalia entrar no admin; num sistema real ficariam vazias.
 - **Identidade visual enxuta:** paleta própria, uma home de apresentação e uma ilustração em SVG; sem design system completo nem teste de usabilidade.
 
 ## O que eu faria para evoluir
